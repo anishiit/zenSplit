@@ -4,6 +4,7 @@ import { FaDollarSign, FaUsers, FaPercentage, FaPlus, FaMoneyBillWave, FaCheckCi
 
 export default function TripExpenseManager() {
   const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [friends, setFriends] = useState(['You', 'Alex', 'Sam', 'Jordan']);
   const [settlements, setSettlements] = useState([]);
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -13,6 +14,25 @@ export default function TripExpenseManager() {
     payer: '',
     participants: []
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState(null);
+
+  // Fetch expenses on mount
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
+
+  const fetchExpenses = async () => {
+    try {
+      const response = await fetch('/api/expenses');
+      const { data } = await response.json();
+      setExpenses(data);
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Calculate balances
   const calculateBalances = () => {
@@ -43,12 +63,45 @@ export default function TripExpenseManager() {
     return net;
   };
 
-  // Add new expense
-  const addExpense = () => {
+  // Updated addExpense function
+  const addExpense = async () => {
     if (newExpense.description && newExpense.amount && newExpense.payer && newExpense.participants.length > 0) {
-      setExpenses([...expenses, { ...newExpense, id: Date.now() }]);
-      setNewExpense({ description: '', amount: '', payer: '', participants: [] });
-      setShowAddExpense(false);
+      try {
+        const response = await fetch('/api/expenses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newExpense),
+        });
+        
+        if (response.ok) {
+          await fetchExpenses();
+          setNewExpense({ description: '', amount: '', payer: '', participants: [] });
+          setShowAddExpense(false);
+        }
+      } catch (error) {
+        console.error('Error adding expense:', error);
+      }
+    }
+  };
+
+  // Updated delete function
+  const deleteExpense = async (id) => {
+    try {
+      const response = await fetch('/api/expenses', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      if (response.ok) {
+        await fetchExpenses();
+      }
+    } catch (error) {
+      console.error('Error deleting expense:', error);
     }
   };
 
@@ -229,7 +282,7 @@ export default function TripExpenseManager() {
             </div>
             <div className="divide-y divide-gray-100">
               {expenses.map(expense => (
-                <div key={expense.id} className="p-4 hover:bg-gray-50 transition-colors">
+                <div key={expense._id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-semibold text-gray-900">{expense.description}</h3>
@@ -247,7 +300,10 @@ export default function TripExpenseManager() {
                       </div>
                     </div>
                     <button
-                      onClick={() => setExpenses(expenses.filter(e => e.id !== expense.id))}
+                      onClick={() => {
+                        setExpenseToDelete(expense);
+                        setShowDeleteConfirm(true);
+                      }}
                       className="text-gray-400 hover:text-red-500 p-2 -m-2"
                     >
                       Delete
@@ -308,6 +364,38 @@ export default function TripExpenseManager() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Delete Expense
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete "{expenseToDelete?.description}"?<br />
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await deleteExpense(expenseToDelete._id);
+                  setShowDeleteConfirm(false);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
