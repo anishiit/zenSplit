@@ -97,11 +97,12 @@ export default function TripExpenseManager() {
         body: JSON.stringify({ id }),
       });
 
-      if (response.ok) {
-        await fetchExpenses();
+      if (!response.ok) {
+        throw new Error('Failed to delete expense');
       }
     } catch (error) {
       console.error('Error deleting expense:', error);
+      throw error; // Re-throw to handle in the modal
     }
   };
 
@@ -270,6 +271,47 @@ export default function TripExpenseManager() {
           </div>
         )}
 
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Delete Expense
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete "{expenseToDelete?.description}"?<br />
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setExpenseToDelete(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await deleteExpense(expenseToDelete._id);
+                      setShowDeleteConfirm(false);
+                      setExpenseToDelete(null);
+                      await fetchExpenses(); // Refresh the list
+                    } catch (error) {
+                      console.error('Deletion failed:', error);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Expenses Column */}
@@ -280,7 +322,7 @@ export default function TripExpenseManager() {
                 Expense History
               </h2>
             </div>
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 max-h-100 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               {expenses.map(expense => (
                 <div key={expense._id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex justify-between items-start">
@@ -364,38 +406,6 @@ export default function TripExpenseManager() {
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Delete Expense
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete "{expenseToDelete?.description}"?<br />
-              This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  await deleteExpense(expenseToDelete._id);
-                  setShowDeleteConfirm(false);
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
