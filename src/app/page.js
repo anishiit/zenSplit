@@ -5,7 +5,7 @@ import { FaDollarSign, FaUsers, FaPercentage, FaPlus, FaMoneyBillWave, FaCheckCi
 export default function TripExpenseManager() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [friends, setFriends] = useState(['You', 'Anup', 'Adesh']);
+  const [friends, setFriends] = useState(['Anish', 'Anup', 'Adesh']);
   const [settlements, setSettlements] = useState([]);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [newExpense, setNewExpense] = useState({
