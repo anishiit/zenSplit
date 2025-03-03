@@ -318,7 +318,7 @@ export default function TripExpenseManager() {
                 Delete Expense
               </h3>
               <p className="text-gray-600 mb-6">
-                Are you sure you want to delete "{expenseToDelete?.description}"?<br />
+                Are you sure you want to delete {expenseToDelete?.description}?<br />
                 This action cannot be undone.
               </p>
               <div className="flex justify-end gap-3">
