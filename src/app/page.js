@@ -176,6 +176,11 @@ export default function TripExpenseManager() {
     }
   };
 
+  // Add this function to calculate total expenses
+  const calculateTotalExpenses = () => {
+    return expenses.reduce((total, expense) => total + parseFloat(expense.amount), 0);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
@@ -186,7 +191,14 @@ export default function TripExpenseManager() {
               Trip Splitter
             </span>
           </h1>
-          <p className="text-gray-700 text-sm md:text-base">Track shared expenses in real-time ⚡</p>
+          <p className="text-gray-700 text-sm md:text-base mb-2">
+            Track shared expenses in real-time ⚡
+          </p>
+          <div className="bg-purple-50 p-3 rounded-lg inline-block">
+            <p className="text-lg font-semibold text-purple-700">
+              Total Expenses: ₹{calculateTotalExpenses().toFixed(2)}
+            </p>
+          </div>
         </div>
 
         {/* Add Expense Button for Desktop */}
