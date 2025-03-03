@@ -1,11 +1,11 @@
 'use client'
 import { useState, useEffect } from "react";
-import { FaDollarSign, FaUsers, FaPercentage, FaPlus, FaMoneyBillWave, FaCheckCircle } from "react-icons/fa";
+import { FaDollarSign, FaUsers, FaPercentage, FaPlus, FaMoneyBillWave, FaCheckCircle, FaTimes } from "react-icons/fa";
 
 export default function TripExpenseManager() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [friends, setFriends] = useState(['You', 'Alex', 'Sam', 'Jordan']);
+  const [friends, setFriends] = useState(['You', 'Anup', 'Adesh']);
   const [settlements, setSettlements] = useState([]);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [newExpense, setNewExpense] = useState({
@@ -37,13 +37,27 @@ export default function TripExpenseManager() {
   // Calculate balances
   const calculateBalances = () => {
     const balances = {};
-    friends.forEach(friend => balances[friend] = { paid: 0, owed: 0 });
+
+    // Initialize all friends with default balances
+    friends.forEach(friend => {
+      balances[friend] = { paid: 0, owed: 0 };
+    });
 
     expenses.forEach(expense => {
       const share = expense.amount / expense.participants.length;
+      
+      // Ensure payer exists in balances
+      if (!balances[expense.payer]) {
+        balances[expense.payer] = { paid: 0, owed: 0 };
+      }
+      
       balances[expense.payer].paid += parseFloat(expense.amount);
       
       expense.participants.forEach(participant => {
+        // Ensure participant exists in balances
+        if (!balances[participant]) {
+          balances[participant] = { paid: 0, owed: 0 };
+        }
         balances[participant].owed += share;
       });
     });
@@ -135,6 +149,31 @@ export default function TripExpenseManager() {
     });
 
     return settlements;
+  };
+
+  const removeFriend = async (friendName) => {
+    if (confirm(`Permanently delete ${friendName} and ALL their transactions?\nThis cannot be undone!`)) {
+      try {
+        // Delete related expenses
+        const deleteResponse = await fetch('/api/friends', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ friendName }),
+        });
+
+        if (!deleteResponse.ok) throw new Error('Deletion failed');
+        
+        // Update local state
+        setFriends(friends.filter(f => f !== friendName));
+        await fetchExpenses(); // Refresh expenses list
+        
+      } catch (error) {
+        console.error('Error deleting friend:', error);
+        alert('Failed to delete friend and transactions');
+      }
+    }
   };
 
   return (
@@ -408,4 +447,29 @@ export default function TripExpenseManager() {
       </div>
     </div>
   );
+}
+
+export async function DELETE(request) {
+  try {
+    const db = await getDb();
+    const { friendName } = await request.json();
+    
+    // Delete all expenses where friend is payer or participant
+    const result = await db.collection('expenses').deleteMany({
+      $or: [
+        { payer: friendName },
+        { participants: friendName }
+      ]
+    });
+
+    return Response.json({ 
+      success: true, 
+      deletedCount: result.deletedCount 
+    });
+  } catch (error) {
+    return Response.json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
 }
