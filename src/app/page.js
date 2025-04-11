@@ -5,7 +5,8 @@ import { FaDollarSign, FaUsers, FaPercentage, FaPlus, FaMoneyBillWave, FaCheckCi
 export default function TripExpenseManager() {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [friends, setFriends] = useState(['Anish', 'Anup', 'Adesh']);
+  const [friends, setFriends] = useState([]);
+  const [newFriend, setNewFriend] = useState("");
   const [settlements, setSettlements] = useState([]);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [newExpense, setNewExpense] = useState({
@@ -16,10 +17,19 @@ export default function TripExpenseManager() {
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
+  const [showFriendDeleteConfirm, setShowFriendDeleteConfirm] = useState(false);
+  const [friendToDelete, setFriendToDelete] = useState(null);
 
-  // Fetch expenses on mount
+  // Add helper to validate timestamp
+  const getValidatedTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleString();
+  };
+
+  // Fetch expenses and friends on mount
   useEffect(() => {
     fetchExpenses();
+    fetchFriends();
   }, []);
 
   const fetchExpenses = async () => {
@@ -31,6 +41,16 @@ export default function TripExpenseManager() {
       console.error('Error fetching expenses:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFriends = async () => {
+    try {
+      const response = await fetch('/api/friends');
+      const { data } = await response.json();
+      setFriends(data);
+    } catch (error) {
+      console.error('Error fetching friends:', error);
     }
   };
 
@@ -151,28 +171,44 @@ export default function TripExpenseManager() {
     return settlements;
   };
 
-  const removeFriend = async (friendName) => {
-    if (confirm(`Permanently delete ${friendName} and ALL their transactions?\nThis cannot be undone!`)) {
-      try {
-        // Delete related expenses
-        const deleteResponse = await fetch('/api/friends', {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ friendName }),
-        });
+  // New friend addition functionality
+  const addFriend = async (e) => {
+    e.preventDefault();
+    if (!newFriend.trim()) return;
+    try {
+      const res = await fetch('/api/friends', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ friendName: newFriend.trim() })
+      });
+      if (!res.ok) throw new Error('Failed to add friend');
+      setNewFriend("");
+      await fetchFriends(); // Refresh friend list from API
+      await fetchExpenses(); // Refresh expenses if needed
+    } catch (error) {
+      console.error('Error adding friend:', error);
+      alert('Failed to add friend');
+    }
+  };
 
-        if (!deleteResponse.ok) throw new Error('Deletion failed');
-        
-        // Update local state
-        setFriends(friends.filter(f => f !== friendName));
-        await fetchExpenses(); // Refresh expenses list
-        
-      } catch (error) {
-        console.error('Error deleting friend:', error);
-        alert('Failed to delete friend and transactions');
-      }
+  const removeFriend = async (friendName) => {
+    try {
+      const deleteResponse = await fetch('/api/friends', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ friendName }),
+      });
+
+      if (!deleteResponse.ok) throw new Error('Deletion failed');
+      
+      await fetchFriends(); // Refresh friend list from API
+      await fetchExpenses(); // Refresh expenses list
+      
+    } catch (error) {
+      console.error('Error deleting friend:', error);
+      alert('Failed to delete friend and transactions');
     }
   };
 
@@ -200,6 +236,8 @@ export default function TripExpenseManager() {
             </p>
           </div>
         </div>
+
+       
 
         {/* Add Expense Button for Desktop */}
         <div className="hidden md:flex justify-end mb-6">
@@ -363,6 +401,42 @@ export default function TripExpenseManager() {
           </div>
         )}
 
+        {/* Friend Deletion Confirmation Modal */}
+        {showFriendDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+              <h3 className="text-2xl font-bold text-blue-800 mb-4">
+                Delete Friend
+              </h3>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to permanently delete {friendToDelete}?<br />
+                This will remove all their transactions.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowFriendDeleteConfirm(false);
+                    setFriendToDelete(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await removeFriend(friendToDelete);
+                    setShowFriendDeleteConfirm(false);
+                    setFriendToDelete(null);
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Expenses Column */}
@@ -381,6 +455,9 @@ export default function TripExpenseManager() {
                       <h3 className="font-semibold text-gray-900">{expense.description}</h3>
                       <p className="text-sm text-gray-700 mt-1">
                         Paid by <span className="font-semibold text-purple-700">{expense.payer}</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Payment Time: {getValidatedTimestamp(expense.timestamp)}
                       </p>
                       <div className="mt-2 flex items-center gap-2 text-sm">
                         <span className="px-2 py-1 bg-gray-200 text-gray-900 rounded-md font-semibold">
@@ -454,6 +531,40 @@ export default function TripExpenseManager() {
                 ))}
               </div>
             </div>
+             {/* Add Friend Form */}
+        <div className="my-4">
+          <form onSubmit={addFriend} className="flex gap-2">
+          <input 
+  type="text" 
+  placeholder="Enter friend's name" 
+  value={newFriend}
+  onChange={(e) => setNewFriend(e.target.value)}
+  className="border border-blue-300 p-2 rounded focus:border-blue-500 
+  text-gray-900 placeholder-gray-500" 
+/>
+            <button type="submit" className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              Add Friend
+            </button>
+          </form>
+        </div>
+
+        {/* Friends List */}
+        <div className="my-4 mb-18">
+          <h2 className="text-xl font-bold text-blue-800">Friends</h2>
+          <ul>
+            {friends.map(friend => (
+              <li key={friend} className="flex items-center justify-between p-2 text-gray-800 bg-blue-50 rounded mb-2">
+                <span>{friend}</span>
+                <button 
+                  onClick={() => { setFriendToDelete(friend); setShowFriendDeleteConfirm(true); }} 
+                  className="text-red-500 font-semibold"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
           </div>
         </div>
       </div>
