@@ -571,28 +571,3 @@ export default function TripExpenseManager() {
     </div>
   );
 }
-
-export async function DELETE(request) {
-  try {
-    const db = await getDb();
-    const { friendName } = await request.json();
-    
-    // Delete all expenses where friend is payer or participant
-    const result = await db.collection('expenses').deleteMany({
-      $or: [
-        { payer: friendName },
-        { participants: friendName }
-      ]
-    });
-
-    return Response.json({ 
-      success: true, 
-      deletedCount: result.deletedCount 
-    });
-  } catch (error) {
-    return Response.json({ 
-      success: false, 
-      error: error.message 
-    });
-  }
-}
