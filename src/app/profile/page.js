@@ -98,7 +98,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     name="name"
-                    className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
+                    className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
                     placeholder="Enter your full name"
                     value={form.name}
                     onChange={handleChange}
@@ -110,7 +110,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     name="upi"
-                    className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
+                    className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
                     placeholder="yourname@upi"
                     value={form.upi}
                     onChange={handleChange}

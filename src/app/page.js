@@ -563,7 +563,7 @@ export default function Dashboard() {
                   type="text"
                   value={newExpense.description}
                   onChange={(e) => setNewExpense(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 bg-white placeholder-slate-400"
                   placeholder="e.g., Dinner at restaurant"
                   required
                 />
@@ -576,7 +576,7 @@ export default function Dashboard() {
                   step="0.01"
                   value={newExpense.amount}
                   onChange={(e) => setNewExpense(prev => ({ ...prev, amount: e.target.value }))}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 bg-white placeholder-slate-400"
                   placeholder="0.00"
                   required
                 />
@@ -663,7 +663,7 @@ export default function Dashboard() {
                           max="100"
                           value={newExpense.percentages[userEmail] || 0}
                           onChange={(e) => updatePercentage(userEmail, e.target.value)}
-                          className="w-16 p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+                          className="w-16 p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 text-slate-900 bg-white"
                           onClick={(e) => e.stopPropagation()}
                         />
                         <span className="text-sm text-gray-500">%</span>
@@ -700,7 +700,7 @@ export default function Dashboard() {
                               max="100"
                               value={newExpense.percentages[friendKey] || 0}
                               onChange={(e) => updatePercentage(friendKey, e.target.value)}
-                              className="w-16 p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+                              className="w-16 p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 text-slate-900 bg-white"
                               onClick={(e) => e.stopPropagation()}
                             />
                             <span className="text-sm text-gray-500">%</span>
@@ -797,7 +797,7 @@ export default function Dashboard() {
                       type="text"
                       value={newFriend}
                       onChange={(e) => setNewFriend(e.target.value)}
-                      className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900"
+                      className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 bg-white placeholder-slate-400"
                       placeholder="Enter friend's name"
                       required
                     />
@@ -832,7 +832,7 @@ export default function Dashboard() {
                         setSearchEmail(e.target.value);
                         searchUsers(e.target.value);
                       }}
-                      className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900"
+                      className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 bg-white placeholder-slate-400"
                       placeholder="Enter email address"
                     />
                     <p className="text-xs text-slate-500 mt-1">Search for existing ZenSplit users</p>

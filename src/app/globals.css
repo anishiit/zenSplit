@@ -150,3 +150,53 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Input and Form Element Styling */
+input, textarea, select {
+  color: var(--neutral-900) !important;
+  background-color: white !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--neutral-400) !important;
+  opacity: 0.8;
+}
+
+input:focus, textarea:focus, select:focus {
+  color: var(--neutral-900) !important;
+  background-color: white !important;
+}
+
+/* Specific input type styling */
+input[type="text"], 
+input[type="email"], 
+input[type="number"], 
+input[type="password"], 
+textarea, 
+select {
+  color: var(--neutral-900) !important;
+  background-color: white !important;
+  caret-color: var(--primary-600);
+}
+
+input[type="text"]:focus, 
+input[type="email"]:focus, 
+input[type="number"]:focus, 
+input[type="password"]:focus, 
+textarea:focus, 
+select:focus {
+  color: var(--neutral-900) !important;
+  background-color: white !important;
+}
+
+/* Checkbox and radio styling */
+input[type="checkbox"], 
+input[type="radio"] {
+  color: var(--primary-600) !important;
+}
+
+/* Option styling for select elements */
+option {
+  color: var(--neutral-900) !important;
+  background-color: white !important;
+}

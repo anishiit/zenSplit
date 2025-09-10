@@ -91,7 +91,7 @@ export default function SignupPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-2">Full Name</label>
               <input
                 type="text"
-                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
+                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
                 placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -103,7 +103,7 @@ export default function SignupPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
               <input
                 type="email"
-                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
+                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -115,7 +115,7 @@ export default function SignupPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-2">UPI ID</label>
               <input
                 type="text"
-                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
+                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
                 placeholder="yourname@upi"
                 value={upi}
                 onChange={(e) => setUpi(e.target.value)}
