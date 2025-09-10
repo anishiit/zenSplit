@@ -36,17 +36,71 @@ export default function Dashboard() {
       return;
     }
     setUserEmail(email);
-    fetchGroups(email);
+
+    // Define functions inside useEffect to avoid dependency issues
+    const fetchGroupsInternal = async (email) => {
+      try {
+        const response = await fetch(`/api/groups?userEmail=${encodeURIComponent(email)}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          setGroups(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching groups:', error);
+      }
+    };
+
+    const fetchGroupDataInternal = async (email, groupId) => {
+      try {
+        // Fetch group-specific data
+        setLoading(true);
+        // Add your group data fetching logic here
+      } catch (error) {
+        console.error('Error fetching group data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchExpensesInternal = async (email) => {
+      try {
+        const response = await fetch(`/api/expenses?email=${encodeURIComponent(email)}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          setExpenses(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching expenses:', error);
+      }
+    };
+
+    const fetchFriendsInternal = async (email) => {
+      try {
+        const response = await fetch(`/api/friends?email=${encodeURIComponent(email)}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          setFriends(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching friends:', error);
+      }
+    };
+
+    fetchGroupsInternal(email);
     
     // If groupId is provided in URL, fetch that group's data
     if (groupId) {
-      fetchGroupData(email, groupId);
+      fetchGroupDataInternal(email, groupId);
     } else {
-      fetchExpenses(email);
-      fetchFriends(email);
+      fetchExpensesInternal(email);
+      fetchFriendsInternal(email);
     }
   }, [groupId]);
 
+  // Wrapper functions for external calls
   const fetchGroups = async (email) => {
     try {
       const response = await fetch(`/api/groups?userEmail=${encodeURIComponent(email)}`);
@@ -466,7 +520,7 @@ export default function Dashboard() {
                       onClick={() => addFriend({ email: searchTerm, name: searchTerm, isRegistered: false })}
                       className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                     >
-                      Add "{searchTerm}" as contact
+                      Add &quot;{searchTerm}&quot; as contact
                     </button>
                   </div>
                 )}
