@@ -7,6 +7,7 @@ let client;
 let clientPromise;
 
 if (!process.env.MONGODB_URI) {
+  console.warn('MONGODB_URI not found in environment variables');
   throw new Error('Please add your Mongo URI to .env.local');
 }
 
@@ -22,6 +23,13 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 export async function getDb() {
-  const client = await clientPromise;
-  return client.db(process.env.MONGODB_DB);
+  try {
+    const client = await clientPromise;
+    const dbName = process.env.MONGODB_DB || 'zenSplit';
+    console.log('Connected to MongoDB, using database:', dbName);
+    return client.db(dbName);
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
 } 

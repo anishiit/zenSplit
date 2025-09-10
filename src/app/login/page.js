@@ -35,6 +35,8 @@ export default function LoginPage() {
     });
     const data = await res.json();
     if (data.success) {
+      // Store email in localStorage for profile access
+      localStorage.setItem('userEmail', email);
       // Redirect or show success
       window.location.href = '/';
     } else {

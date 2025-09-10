@@ -3,42 +3,107 @@ import { getDb } from '../../../lib/mongodb';
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email');
+    
+    if (!email) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Email parameter is required' 
+      }, { status: 400 });
+    }
+    
     const db = await getDb();
-    const friends = await db.collection('friends').find({}).toArray();
-    const friendNames = friends.map(friend => friend.name);
-    return NextResponse.json({ data: friendNames });
+    const user = await db.collection('users').findOne({ email: email });
+    
+    if (!user) {
+      return NextResponse.json({ 
+        success: true, 
+        data: [] 
+      });
+    }
+    
+    const friends = user.friends || [];
+    return NextResponse.json({ 
+      success: true, 
+      data: friends 
+    });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error('Friends GET error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const { friendName } = await request.json();
+    const { userEmail, friendName } = await request.json();
+    
+    if (!userEmail || !friendName) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User email and friend name are required' 
+      }, { status: 400 });
+    }
+    
     const db = await getDb();
-    // Insert friend into the 'friends' collection
-    await db.collection('friends').insertOne({ name: friendName });
-    return NextResponse.json({ success: true });
+    
+    // Add friend to user's friends list
+    const result = await db.collection('users').updateOne(
+      { email: userEmail },
+      { 
+        $addToSet: { friends: friendName },
+        $set: { updatedAt: new Date() }
+      },
+      { upsert: true }
+    );
+    
+    return NextResponse.json({ 
+      success: true,
+      message: 'Friend added successfully'
+    });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error('Friends POST error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const { friendName } = await request.json();
+    const { userEmail, friendName } = await request.json();
+    
+    if (!userEmail || !friendName) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User email and friend name are required' 
+      }, { status: 400 });
+    }
+    
     const db = await getDb();
-    // Remove friend from friends collection
-    await db.collection('friends').deleteOne({ name: friendName });
-    // Delete all expenses where friend is payer or participant
-    await db.collection('expenses').deleteMany({
-      $or: [
-        { payer: friendName },
-        { participants: friendName }
-      ]
+    
+    // Remove friend from user's friends list
+    const result = await db.collection('users').updateOne(
+      { email: userEmail },
+      { 
+        $pull: { friends: friendName },
+        $set: { updatedAt: new Date() }
+      }
+    );
+    
+    return NextResponse.json({ 
+      success: true,
+      message: 'Friend removed successfully'
     });
-    return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error('Friends DELETE error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
   }
 }
