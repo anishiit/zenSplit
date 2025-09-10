@@ -17,11 +17,46 @@ export async function GET(request) {
     
     const db = await getDb();
     
-    let query = { userEmail: email };
+    let query;
     
-    // If groupId is provided, filter by group
     if (groupId) {
-      query.groupId = groupId;
+      // For group expenses, first verify user is a member of the group
+      const user = await db.collection('users').findOne({ email: email });
+      if (!user) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'User not found' 
+        }, { status: 404 });
+      }
+      
+      const group = await db.collection('groups').findOne({ groupId: groupId });
+      if (!group) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Group not found' 
+        }, { status: 404 });
+      }
+      
+      // Check if user is member of the group
+      const isMember = group.members.some(m => m.userId === user.userId);
+      if (!isMember) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'User is not a member of this group' 
+        }, { status: 403 });
+      }
+      
+      // Show ALL expenses in the group (not just user's own)
+      query = { groupId: groupId };
+    } else {
+      // For personal expenses, show only user's own expenses
+      query = { 
+        userEmail: email,
+        $or: [
+          { groupId: null },
+          { groupId: { $exists: false } }
+        ]
+      };
     }
     
     const expenses = await db.collection('expenses')
@@ -47,26 +82,37 @@ export async function POST(request) {
     const expense = await request.json();
     console.log('Expense received:', expense);
     
-    // Fix field mapping - frontend sends 'payer' but we need 'userEmail'
-    if (expense.payer && !expense.userEmail) {
-      expense.userEmail = expense.payer;
-    }
-    
     if (!expense.userEmail) {
       return NextResponse.json({ 
         success: false, 
         error: 'User email is required' 
       }, { status: 400 });
     }
+
+    if (!expense.payer) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Payer is required' 
+      }, { status: 400 });
+    }
     
     const db = await getDb();
     
-    // Verify user exists
+    // Verify user creating the expense exists
     const user = await db.collection('users').findOne({ email: expense.userEmail });
     if (!user) {
       return NextResponse.json({ 
         success: false, 
         error: 'User not found' 
+      }, { status: 404 });
+    }
+
+    // Verify payer exists (could be different from user creating expense)
+    const payer = await db.collection('users').findOne({ email: expense.payer });
+    if (!payer) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Payer not found' 
       }, { status: 404 });
     }
     
@@ -82,12 +128,21 @@ export async function POST(request) {
         }, { status: 404 });
       }
       
-      // Check if user is member of the group
+      // Check if user creating expense is member of the group
       const isMember = group.members.some(m => m.userId === user.userId);
       if (!isMember) {
         return NextResponse.json({ 
           success: false, 
           error: 'User is not a member of this group' 
+        }, { status: 403 });
+      }
+
+      // Check if payer is also member of the group
+      const isPayerMember = group.members.some(m => m.userId === payer.userId);
+      if (!isPayerMember) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Payer is not a member of this group' 
         }, { status: 403 });
       }
       
