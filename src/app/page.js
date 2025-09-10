@@ -16,7 +16,9 @@ export default function Dashboard() {
     description: '',
     amount: '',
     payer: '',
-    participants: []
+    participants: [],
+    splitType: 'equal', // 'equal' or 'percentage'
+    percentages: {} // participant -> percentage mapping
   });
   const [userEmail, setUserEmail] = useState('');
 
@@ -65,6 +67,15 @@ export default function Dashboard() {
       alert('Please fill all fields and select participants');
       return;
     }
+    
+    // Validate percentage split if using percentage mode
+    if (newExpense.splitType === 'percentage') {
+      const totalPercentage = getTotalPercentage();
+      if (totalPercentage !== 100) {
+        alert('Percentage split must total exactly 100%');
+        return;
+      }
+    }
 
     try {
       const response = await fetch('/api/expenses', {
@@ -73,13 +84,22 @@ export default function Dashboard() {
         body: JSON.stringify({
           ...newExpense,
           userEmail: userEmail,
-          amount: parseFloat(newExpense.amount)
+          amount: parseFloat(newExpense.amount),
+          splitType: newExpense.splitType,
+          percentages: newExpense.splitType === 'percentage' ? newExpense.percentages : {}
         }),
       });
       
       if (response.ok) {
         await fetchExpenses();
-        setNewExpense({ description: '', amount: '', payer: '', participants: [] });
+        setNewExpense({ 
+          description: '', 
+          amount: '', 
+          payer: '', 
+          participants: [],
+          splitType: 'equal',
+          percentages: {}
+        });
         setShowAddExpense(false);
       }
     } catch (error) {
@@ -163,23 +183,37 @@ export default function Dashboard() {
   const calculateBalances = () => {
     const balances = {};
     
-    // Initialize balances for all friends
+    // Initialize balances for all friends and current user
     friends.forEach(friend => {
       const friendKey = typeof friend === 'string' ? friend : (friend.email || friend.name);
       balances[friendKey] = 0;
     });
     
+    // Initialize balance for current user
+    if (userEmail) {
+      balances[userEmail] = 0;
+    }
+    
     expenses.forEach(expense => {
-      const splitAmount = expense.amount / expense.participants.length;
-      
-      // Payer gets positive balance
+      // Payer gets positive balance (what they paid)
       if (!balances[expense.payer]) balances[expense.payer] = 0;
       balances[expense.payer] += expense.amount;
       
-      // Participants owe money
+      // Calculate how much each participant owes
       expense.participants.forEach(participant => {
         if (!balances[participant]) balances[participant] = 0;
-        balances[participant] -= splitAmount;
+        
+        let owedAmount;
+        if (expense.splitType === 'percentage' && expense.percentages) {
+          // Calculate based on percentage
+          const percentage = expense.percentages[participant] || 0;
+          owedAmount = (expense.amount * percentage) / 100;
+        } else {
+          // Equal split (default)
+          owedAmount = expense.amount / expense.participants.length;
+        }
+        
+        balances[participant] -= owedAmount;
       });
     });
     
@@ -197,13 +231,60 @@ export default function Dashboard() {
   };
 
   const toggleParticipant = (friend) => {
-    const friendKey = getFriendKey(friend);
+    const friendKey = typeof friend === 'string' ? friend : getFriendKey(friend);
+    
+    setNewExpense(prev => {
+      const isCurrentlySelected = prev.participants.includes(friendKey);
+      let newParticipants;
+      
+      if (isCurrentlySelected) {
+        newParticipants = prev.participants.filter(p => p !== friendKey);
+      } else {
+        newParticipants = [...prev.participants, friendKey];
+      }
+      
+      // If switching to percentage mode, initialize percentages
+      let newPercentages = { ...prev.percentages };
+      if (prev.splitType === 'percentage') {
+        if (!isCurrentlySelected) {
+          // Adding participant - set equal percentage
+          const equalPercentage = Math.floor(100 / (newParticipants.length));
+          newParticipants.forEach(p => {
+            newPercentages[p] = equalPercentage;
+          });
+        } else {
+          // Removing participant - redistribute percentages
+          delete newPercentages[friendKey];
+          const remainingParticipants = Object.keys(newPercentages);
+          if (remainingParticipants.length > 0) {
+            const equalPercentage = Math.floor(100 / remainingParticipants.length);
+            remainingParticipants.forEach(p => {
+              newPercentages[p] = equalPercentage;
+            });
+          }
+        }
+      }
+      
+      return {
+        ...prev,
+        participants: newParticipants,
+        percentages: newPercentages
+      };
+    });
+  };
+
+  const updatePercentage = (participant, percentage) => {
     setNewExpense(prev => ({
       ...prev,
-      participants: prev.participants.includes(friendKey)
-        ? prev.participants.filter(p => p !== friendKey)
-        : [...prev.participants, friendKey]
+      percentages: {
+        ...prev.percentages,
+        [participant]: parseInt(percentage) || 0
+      }
     }));
+  };
+
+  const getTotalPercentage = () => {
+    return Object.values(newExpense.percentages).reduce((sum, p) => sum + (parseInt(p) || 0), 0);
   };
 
   if (loading) {
@@ -319,13 +400,18 @@ export default function Dashboard() {
                           <p className="text-sm text-gray-600 mb-2">
                             Paid by <span className="font-medium text-indigo-600">{expense.payer}</span>
                           </p>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 flex-wrap">
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 font-medium">
                               ₹{parseFloat(expense.amount).toFixed(2)}
                             </span>
                             <span className="text-sm text-gray-500">
                               Split between {expense.participants?.length || 0} people
                             </span>
+                            {expense.splitType === 'percentage' && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 font-medium">
+                                % Split
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -361,6 +447,44 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="divide-y divide-slate-200/50">
+                  {/* Current User Balance */}
+                  {userEmail && balances[userEmail] !== undefined && (
+                    <div className="p-6 hover:bg-slate-50/50 transition-colors bg-blue-50/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                            <span className="text-white font-semibold text-sm">
+                              {userEmail.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <p className="font-medium text-slate-900">You ({userEmail.split('@')[0]})</p>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Me
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-500">{userEmail}</p>
+                            <p className="text-sm text-slate-500">
+                              {balances[userEmail] > 0 && "Others owe you"}
+                              {balances[userEmail] < 0 && "You owe others"}
+                              {balances[userEmail] === 0 && "All settled up"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-lg font-bold ${
+                            balances[userEmail] > 0 ? 'text-green-600' : 
+                            balances[userEmail] < 0 ? 'text-red-600' : 'text-slate-500'
+                          }`}>
+                            {balances[userEmail] > 0 ? '+' : ''}₹{Math.abs(balances[userEmail]).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Friends Balances */}
                   {friends.map(friend => {
                     const friendKey = getFriendKey(friend);
                     const friendName = getFriendDisplayName(friend);
@@ -467,6 +591,7 @@ export default function Dashboard() {
                   required
                 >
                   <option value="">Select payer</option>
+                  <option value={userEmail}>You ({userEmail?.split('@')[0]})</option>
                   {friends.map(friend => {
                     const friendKey = getFriendKey(friend);
                     const friendName = getFriendDisplayName(friend);
@@ -478,24 +603,126 @@ export default function Dashboard() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Split between</label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-gray-700">Split between</label>
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <button
+                      type="button"
+                      onClick={() => setNewExpense(prev => ({ ...prev, splitType: 'equal', percentages: {} }))}
+                      className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                        newExpense.splitType === 'equal' 
+                          ? 'bg-white text-gray-900 shadow-sm' 
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Equal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewExpense(prev => {
+                          const equalPercentage = Math.floor(100 / (prev.participants.length || 1));
+                          const newPercentages = {};
+                          prev.participants.forEach(p => {
+                            newPercentages[p] = equalPercentage;
+                          });
+                          return { ...prev, splitType: 'percentage', percentages: newPercentages };
+                        });
+                      }}
+                      className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                        newExpense.splitType === 'percentage' 
+                          ? 'bg-white text-gray-900 shadow-sm' 
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      % Split
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-xl p-3 bg-gray-50">
+                  {/* Current User */}
+                  <label className="flex items-center space-x-3 p-2 hover:bg-white rounded-lg cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newExpense.participants.includes(userEmail)}
+                      onChange={() => toggleParticipant(userEmail)}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <div className="flex-1 flex items-center space-x-2">
+                      <span className="text-gray-700 font-medium">You ({userEmail?.split('@')[0]})</span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Me
+                      </span>
+                    </div>
+                    {newExpense.splitType === 'percentage' && newExpense.participants.includes(userEmail) && (
+                      <div className="flex items-center space-x-1">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={newExpense.percentages[userEmail] || 0}
+                          onChange={(e) => updatePercentage(userEmail, e.target.value)}
+                          className="w-16 p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="text-sm text-gray-500">%</span>
+                      </div>
+                    )}
+                  </label>
+                  
+                  {/* Friends */}
                   {friends.map(friend => {
                     const friendKey = getFriendKey(friend);
                     const friendName = getFriendDisplayName(friend);
+                    const isRegistered = typeof friend === 'object' ? friend.isRegistered : false;
                     return (
-                      <label key={friendKey} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
+                      <label key={friendKey} className="flex items-center space-x-3 p-2 hover:bg-white rounded-lg cursor-pointer">
                         <input
                           type="checkbox"
                           checked={newExpense.participants.includes(friendKey)}
                           onChange={() => toggleParticipant(friend)}
                           className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                         />
-                        <span className="text-gray-700">{friendName}</span>
+                        <div className="flex-1 flex items-center space-x-2">
+                          <span className="text-gray-700">{friendName}</span>
+                          {isRegistered && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              ✓
+                            </span>
+                          )}
+                        </div>
+                        {newExpense.splitType === 'percentage' && newExpense.participants.includes(friendKey) && (
+                          <div className="flex items-center space-x-1">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={newExpense.percentages[friendKey] || 0}
+                              onChange={(e) => updatePercentage(friendKey, e.target.value)}
+                              className="w-16 p-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <span className="text-sm text-gray-500">%</span>
+                          </div>
+                        )}
                       </label>
                     );
                   })}
                 </div>
+                
+                {newExpense.splitType === 'percentage' && newExpense.participants.length > 0 && (
+                  <div className="mt-2 text-sm">
+                    <div className={`flex items-center justify-between p-2 rounded ${
+                      getTotalPercentage() === 100 ? 'bg-green-50 text-green-800' : 'bg-orange-50 text-orange-800'
+                    }`}>
+                      <span>Total: {getTotalPercentage()}%</span>
+                      {getTotalPercentage() !== 100 && (
+                        <span className="text-xs">Must equal 100%</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="flex space-x-3 pt-4">
