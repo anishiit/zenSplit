@@ -34,7 +34,14 @@ export default function TripExpenseManager() {
 
   const fetchExpenses = async () => {
     try {
-      const response = await fetch('/api/expenses');
+      // Get the logged-in user's email from localStorage (set after login)
+      const userEmail = localStorage.getItem('userEmail');
+      if (!userEmail) {
+        setExpenses([]);
+        setLoading(false);
+        return;
+      }
+      const response = await fetch(`/api/expenses?email=${encodeURIComponent(userEmail)}`);
       const { data } = await response.json();
       setExpenses(data);
     } catch (error) {

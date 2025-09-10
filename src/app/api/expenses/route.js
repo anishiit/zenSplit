@@ -1,9 +1,14 @@
 import { getDb } from '../../../lib/mongodb';
 
-export async function GET() {
+export async function GET(request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email');
+    if (!email) {
+      return Response.json({ success: false, error: 'Email is required' });
+    }
     const db = await getDb();
-    const expenses = await db.collection('expenses').find().toArray();
+    const expenses = await db.collection('expenses').find({ email }).toArray();
     return Response.json({ success: true, data: expenses });
   } catch (error) {
     return Response.json({ success: false, error: error.message });
