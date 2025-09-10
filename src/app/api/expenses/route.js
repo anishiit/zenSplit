@@ -161,7 +161,7 @@ export async function POST(request) {
       await db.collection('groups').updateOne(
         { groupId: expense.groupId },
         { 
-          $inc: { 'statistics.totalExpenses': 1, 'statistics.totalAmount': expense.amount },
+          $inc: { 'stats.totalExpenses': 1, 'stats.totalAmount': expense.amount },
           $set: { updatedAt: new Date() }
         }
       );

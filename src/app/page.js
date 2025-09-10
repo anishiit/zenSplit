@@ -130,11 +130,11 @@ export default function Dashboard() {
     // Initial load
     loadData();
     
-    // Set up auto-refresh every 10 seconds for faster sync
-    const autoRefreshInterval = setInterval(() => {
-      console.log('Auto-refreshing data...');
-      loadData();
-    }, 10000);
+    // Auto-refresh disabled - only refresh on window focus
+    // const autoRefreshInterval = setInterval(() => {
+    //   console.log('Auto-refreshing data...');
+    //   loadData();
+    // }, 10000);
     
     // Refresh when window gets focus (user switches back to tab)
     const handleFocus = () => {
@@ -146,7 +146,7 @@ export default function Dashboard() {
     
     // Cleanup
     return () => {
-      clearInterval(autoRefreshInterval);
+      // clearInterval(autoRefreshInterval);
       window.removeEventListener('focus', handleFocus);
     };
   }, [groupId]); // Only depend on groupId
