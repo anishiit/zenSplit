@@ -6,6 +6,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [friends, setFriends] = useState([]);
   const [newFriend, setNewFriend] = useState("");
+  const [searchEmail, setSearchEmail] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [addMode, setAddMode] = useState('name'); // 'name' or 'email'
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [newExpense, setNewExpense] = useState({
@@ -83,9 +87,30 @@ export default function Dashboard() {
     }
   };
 
+  const searchUsers = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      const response = await fetch(`/api/friends?email=${encodeURIComponent(userEmail)}&search=${encodeURIComponent(query)}`);
+      const result = await response.json();
+      setSearchResults(result.data || []);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const addFriend = async (e) => {
     e.preventDefault();
-    if (!newFriend.trim()) return;
+    
+    if (addMode === 'name' && !newFriend.trim()) return;
+    if (addMode === 'email' && !searchEmail.trim()) return;
     
     try {
       const response = await fetch('/api/friends', {
@@ -93,12 +118,36 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           userEmail: userEmail,
-          friendName: newFriend.trim() 
+          ...(addMode === 'email' ? { friendEmail: searchEmail.trim() } : { friendName: newFriend.trim() })
         })
       });
       
       if (response.ok) {
         setNewFriend("");
+        setSearchEmail("");
+        setSearchResults([]);
+        await fetchFriends();
+        setShowAddFriend(false);
+      }
+    } catch (error) {
+      console.error('Error adding friend:', error);
+    }
+  };
+
+  const addFriendFromSearch = async (user) => {
+    try {
+      const response = await fetch('/api/friends', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userEmail: userEmail,
+          friendEmail: user.email
+        })
+      });
+      
+      if (response.ok) {
+        setSearchEmail("");
+        setSearchResults([]);
         await fetchFriends();
         setShowAddFriend(false);
       }
@@ -114,9 +163,10 @@ export default function Dashboard() {
   const calculateBalances = () => {
     const balances = {};
     
-    // Initialize balances
+    // Initialize balances for all friends
     friends.forEach(friend => {
-      balances[friend] = 0;
+      const friendKey = typeof friend === 'string' ? friend : (friend.email || friend.name);
+      balances[friendKey] = 0;
     });
     
     expenses.forEach(expense => {
@@ -136,12 +186,23 @@ export default function Dashboard() {
     return balances;
   };
 
+  const getFriendDisplayName = (friend) => {
+    if (typeof friend === 'string') return friend;
+    return friend.name || friend.email?.split('@')[0] || 'Unknown';
+  };
+
+  const getFriendKey = (friend) => {
+    if (typeof friend === 'string') return friend;
+    return friend.email || friend.name;
+  };
+
   const toggleParticipant = (friend) => {
+    const friendKey = getFriendKey(friend);
     setNewExpense(prev => ({
       ...prev,
-      participants: prev.participants.includes(friend)
-        ? prev.participants.filter(p => p !== friend)
-        : [...prev.participants, friend]
+      participants: prev.participants.includes(friendKey)
+        ? prev.participants.filter(p => p !== friendKey)
+        : [...prev.participants, friendKey]
     }));
   };
 
@@ -299,24 +360,37 @@ export default function Dashboard() {
                   </button>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200/50">
+                <div className="divide-y divide-slate-200/50">
                   {friends.map(friend => {
-                    const balance = balances[friend] || 0;
+                    const friendKey = getFriendKey(friend);
+                    const friendName = getFriendDisplayName(friend);
+                    const balance = balances[friendKey] || 0;
                     const isOwed = balance > 0;
                     const isOwing = balance < 0;
+                    const isRegistered = typeof friend === 'object' ? friend.isRegistered : false;
                     
                     return (
-                      <div key={friend} className="p-6 hover:bg-gray-50/50 transition-colors">
+                      <div key={friendKey} className="p-6 hover:bg-slate-50/50 transition-colors">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
                               <span className="text-white font-semibold text-sm">
-                                {friend.charAt(0).toUpperCase()}
+                                {friendName.charAt(0).toUpperCase()}
                               </span>
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900">{friend}</p>
-                              <p className="text-sm text-gray-500">
+                              <div className="flex items-center space-x-2">
+                                <p className="font-medium text-slate-900">{friendName}</p>
+                                {isRegistered && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    ✓ Registered
+                                  </span>
+                                )}
+                              </div>
+                              {typeof friend === 'object' && friend.email && (
+                                <p className="text-sm text-slate-500">{friend.email}</p>
+                              )}
+                              <p className="text-sm text-slate-500">
                                 {isOwed && "Owes you"}
                                 {isOwing && "You owe"}
                                 {balance === 0 && "Settled up"}
@@ -393,26 +467,34 @@ export default function Dashboard() {
                   required
                 >
                   <option value="">Select payer</option>
-                  {friends.map(friend => (
-                    <option key={friend} value={friend}>{friend}</option>
-                  ))}
+                  {friends.map(friend => {
+                    const friendKey = getFriendKey(friend);
+                    const friendName = getFriendDisplayName(friend);
+                    return (
+                      <option key={friendKey} value={friendKey}>{friendName}</option>
+                    );
+                  })}
                 </select>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Split between</label>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {friends.map(friend => (
-                    <label key={friend} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newExpense.participants.includes(friend)}
-                        onChange={() => toggleParticipant(friend)}
-                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                      />
-                      <span className="text-gray-700">{friend}</span>
-                    </label>
-                  ))}
+                  {friends.map(friend => {
+                    const friendKey = getFriendKey(friend);
+                    const friendName = getFriendDisplayName(friend);
+                    return (
+                      <label key={friendKey} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newExpense.participants.includes(friendKey)}
+                          onChange={() => toggleParticipant(friend)}
+                          className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        />
+                        <span className="text-gray-700">{friendName}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
               
@@ -439,40 +521,160 @@ export default function Dashboard() {
       {/* Add Friend Modal */}
       {showAddFriend && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">Add New Friend</h3>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b border-slate-200">
+              <h3 className="text-xl font-bold text-slate-900">Add New Friend</h3>
+              <p className="text-slate-600 text-sm mt-1">Add friends by name or search by email</p>
             </div>
             
-            <form onSubmit={addFriend} className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Friend&apos;s Name</label>
-                <input
-                  type="text"
-                  value={newFriend}
-                  onChange={(e) => setNewFriend(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Enter friend's name"
-                  required
-                />
-              </div>
-              
-              <div className="flex space-x-3">
+            <div className="p-6">
+              {/* Mode Toggle */}
+              <div className="flex bg-slate-100 rounded-xl p-1 mb-6">
                 <button
                   type="button"
-                  onClick={() => setShowAddFriend(false)}
-                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-medium"
+                  onClick={() => {
+                    setAddMode('name');
+                    setSearchEmail('');
+                    setSearchResults([]);
+                  }}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                    addMode === 'name' 
+                      ? 'bg-white text-slate-900 shadow-sm' 
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  Cancel
+                  Add by Name
                 </button>
                 <button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-700 font-medium"
+                  type="button"
+                  onClick={() => {
+                    setAddMode('email');
+                    setNewFriend('');
+                  }}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                    addMode === 'email' 
+                      ? 'bg-white text-slate-900 shadow-sm' 
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  Add Friend
+                  Search by Email
                 </button>
               </div>
-            </form>
+
+              {addMode === 'name' ? (
+                // Add by Name Form
+                <form onSubmit={addFriend} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Friend&apos;s Name</label>
+                    <input
+                      type="text"
+                      value={newFriend}
+                      onChange={(e) => setNewFriend(e.target.value)}
+                      className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900"
+                      placeholder="Enter friend's name"
+                      required
+                    />
+                    <p className="text-xs text-slate-500 mt-1">For friends who don&apos;t have an account yet</p>
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddFriend(false)}
+                      className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-3 rounded-xl hover:from-emerald-600 hover:to-teal-700 font-medium"
+                    >
+                      Add Friend
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                // Search by Email
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Search by Email</label>
+                    <input
+                      type="email"
+                      value={searchEmail}
+                      onChange={(e) => {
+                        setSearchEmail(e.target.value);
+                        searchUsers(e.target.value);
+                      }}
+                      className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900"
+                      placeholder="Enter email address"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Search for existing ZenSplit users</p>
+                  </div>
+
+                  {/* Search Results */}
+                  {isSearching && (
+                    <div className="text-center py-4">
+                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                      <p className="text-sm text-slate-600 mt-2">Searching...</p>
+                    </div>
+                  )}
+
+                  {searchResults.length > 0 && (
+                    <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-xl">
+                      {searchResults.map((user, index) => (
+                        <div
+                          key={user.email}
+                          className={`p-3 hover:bg-slate-50 cursor-pointer ${
+                            index !== searchResults.length - 1 ? 'border-b border-slate-100' : ''
+                          }`}
+                          onClick={() => addFriendFromSearch(user)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                              <span className="text-white font-semibold text-sm">
+                                {user.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-slate-900">{user.name}</p>
+                              <p className="text-sm text-slate-600">{user.email}</p>
+                            </div>
+                            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                              <span className="text-white text-xs">✓</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {searchEmail && !isSearching && searchResults.length === 0 && (
+                    <div className="text-center py-4">
+                      <p className="text-slate-600">No users found</p>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          addFriend(e);
+                        }}
+                        className="mt-2 text-blue-500 hover:text-blue-600 font-medium text-sm"
+                      >
+                        Add &quot;{searchEmail}&quot; anyway
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddFriend(false)}
+                      className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
