@@ -36,121 +36,33 @@ export default function Dashboard() {
       return;
     }
     setUserEmail(email);
+    fetchGroups(email);
     
-    // Define functions inside useEffect to avoid dependency issues
-    const fetchGroupsInternal = async () => {
-      try {
-        const response = await fetch(`/api/groups?userEmail=${encodeURIComponent(email)}`);
-        const result = await response.json();
-        
-        if (result.success) {
-          setGroups(result.data);
-          return result.data;
-        }
-      } catch (error) {
-        console.error('Error fetching groups:', error);
-      }
-      return [];
-    };
-
-    const fetchGroupDataInternal = async (groupId, groupsData = null) => {
-      try {
-        // Fetch group-specific expenses
-        const expensesResponse = await fetch(`/api/expenses?email=${encodeURIComponent(email)}&groupId=${encodeURIComponent(groupId)}`);
-        const expensesResult = await expensesResponse.json();
-        
-        if (expensesResult.success) {
-          setExpenses(expensesResult.data);
-        }
-
-        // Get group info and set friends as group members
-        const group = groupsData?.find(g => g.groupId === groupId);
-        if (group) {
-          setCurrentGroup(group);
-          // Set friends as group members (excluding current user)
-          const groupFriends = group.members.filter(member => member.email !== email).map(member => ({
-            email: member.email,
-            name: member.name,
-            isRegistered: true,
-            userId: member.userId
-          }));
-          setFriends(groupFriends);
-        }
-      } catch (error) {
-        console.error('Error fetching group data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchExpensesInternal = async () => {
-      try {
-        const response = await fetch(`/api/expenses?email=${encodeURIComponent(email)}`);
-        const result = await response.json();
-        
-        if (result.success) {
-          setExpenses(result.data);
-        }
-      } catch (error) {
-        console.error('Error fetching expenses:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchFriendsInternal = async () => {
-      try {
-        const response = await fetch(`/api/friends?email=${encodeURIComponent(email)}`);
-        const result = await response.json();
-        
-        if (result.success) {
-          setFriends(result.data);
-        }
-      } catch (error) {
-        console.error('Error fetching friends:', error);
-      }
-    };
-    
-    const loadData = async () => {
-      if (groupId) {
-        // If groupId is provided, fetch groups first then group data
-        const groupsData = await fetchGroupsInternal();
-        await fetchGroupDataInternal(groupId, groupsData);
-      } else {
-        // Otherwise fetch general data
-        await fetchGroupsInternal();
-        fetchExpensesInternal();
-        fetchFriendsInternal();
-      }
-    };
-    
-    loadData();
-  }, [groupId]); // Only depend on groupId
-
-  // Functions needed by other parts of the component
-  const fetchFriends = async (email) => {
-    try {
-      const response = await fetch(`/api/friends?email=${encodeURIComponent(email)}`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setFriends(result.data);
-      }
-    } catch (error) {
-      console.error('Error fetching friends:', error);
+    // If groupId is provided in URL, fetch that group's data
+    if (groupId) {
+      fetchGroupData(email, groupId);
+    } else {
+      fetchExpenses(email);
+      fetchFriends(email);
     }
-  };
+  }, [groupId]);
 
-  const fetchExpenses = async (email) => {
+  const fetchGroups = async (email) => {
     try {
-      const response = await fetch(`/api/expenses?email=${encodeURIComponent(email)}`);
+      const response = await fetch(`/api/groups?userEmail=${encodeURIComponent(email)}`);
       const result = await response.json();
       
       if (result.success) {
-        setExpenses(result.data);
+        setGroups(result.data);
+        
+        // If groupId is provided, set current group
+        if (groupId) {
+          const group = result.data.find(g => g.groupId === groupId);
+          setCurrentGroup(group);
+        }
       }
     } catch (error) {
-      console.error('Error fetching expenses:', error);
+      console.error('Error fetching groups:', error);
     }
   };
 
@@ -165,25 +77,49 @@ export default function Dashboard() {
       }
 
       // Get group info and set friends as group members
-      const groupsResponse = await fetch(`/api/groups?userEmail=${encodeURIComponent(email)}`);
-      const groupsResult = await groupsResponse.json();
-      
-      if (groupsResult.success) {
-        const group = groupsResult.data.find(g => g.groupId === groupId);
-        if (group) {
-          setCurrentGroup(group);
-          // Set friends as group members (excluding current user)
-          const groupFriends = group.members.filter(member => member.email !== email).map(member => ({
-            email: member.email,
-            name: member.name,
-            isRegistered: true,
-            userId: member.userId
-          }));
-          setFriends(groupFriends);
-        }
+      const group = groups.find(g => g.groupId === groupId) || currentGroup;
+      if (group) {
+        // Set friends as group members (excluding current user)
+        const groupFriends = group.members.filter(member => member.email !== email).map(member => ({
+          email: member.email,
+          name: member.name,
+          isRegistered: true,
+          userId: member.userId
+        }));
+        setFriends(groupFriends);
       }
     } catch (error) {
       console.error('Error fetching group data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchExpenses = async (email) => {
+    try {
+      const response = await fetch(`/api/expenses?email=${encodeURIComponent(email)}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setExpenses(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFriends = async (email) => {
+    try {
+      const response = await fetch(`/api/friends?email=${encodeURIComponent(email)}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setFriends(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching friends:', error);
     }
   };
 
@@ -194,7 +130,7 @@ export default function Dashboard() {
     }
 
     try {
-      const response = await fetch(`/api/friends?email=${encodeURIComponent(userEmail)}&search=${encodeURIComponent(searchTerm)}`);
+      const response = await fetch(`/api/friends?search=${encodeURIComponent(searchTerm)}`);
       const result = await response.json();
       
       if (result.success) {
@@ -214,8 +150,7 @@ export default function Dashboard() {
         },
         body: JSON.stringify({
           userEmail,
-          friendEmail: friendToAdd.email,
-          friendName: friendToAdd.name,
+          friend: friendToAdd,
           groupId // Include group context if adding within a group
         }),
       });
@@ -284,10 +219,9 @@ export default function Dashboard() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userEmail: userEmail,  // Send userEmail instead of payer
           description: expenseDescription,
           amount: parseFloat(expenseAmount),
-          payer: userEmail,  // Keep payer for internal logic
+          payer: userEmail,
           participants: participants,
           splits: splits,
           groupId: groupId // Include group context
@@ -324,18 +258,15 @@ export default function Dashboard() {
     const balances = {};
     
     expenses.forEach(expense => {
-      // Check if expense.splits exists and is an object
-      if (expense.splits && typeof expense.splits === 'object') {
-        Object.entries(expense.splits).forEach(([email, amount]) => {
-          if (!balances[email]) balances[email] = 0;
-          
-          if (email === expense.payer) {
-            balances[email] += expense.amount - amount;
-          } else {
-            balances[email] -= amount;
-          }
-        });
-      }
+      Object.entries(expense.splits).forEach(([email, amount]) => {
+        if (!balances[email]) balances[email] = 0;
+        
+        if (email === expense.payer) {
+          balances[email] += expense.amount - amount;
+        } else {
+          balances[email] -= amount;
+        }
+      });
     });
     
     return balances;
@@ -535,7 +466,7 @@ export default function Dashboard() {
                       onClick={() => addFriend({ email: searchTerm, name: searchTerm, isRegistered: false })}
                       className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                     >
-                      Add &quot;{searchTerm}&quot; as contact
+                      Add "{searchTerm}" as contact
                     </button>
                   </div>
                 )}

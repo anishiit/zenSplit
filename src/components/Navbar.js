@@ -24,6 +24,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Dashboard', icon: '📊' },
+    { href: '/groups', label: 'Groups', icon: '👥' },
     { href: '/profile', label: 'Profile', icon: '👤' },
   ];
 

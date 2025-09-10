@@ -2,9 +2,10 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { getDb } from '../../../lib/mongodb';
+import { ObjectId } from 'mongodb';
 
 // Configure your SMTP credentials in environment variables for security
-const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransporter({
   service: process.env.SMTP_SERVICE || 'gmail',
   auth: {
     user: process.env.SMTP_USER,
@@ -16,7 +17,7 @@ async function sendOtpEmail(email, otp) {
   const mailOptions = {
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: email,
-    subject: 'Your OTP for Signup',
+    subject: 'Your OTP for ZenSplit Signup',
     text: `Your OTP is: ${otp}`,
   };
   await transporter.sendMail(mailOptions);
@@ -27,6 +28,10 @@ const otpStore = {};
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function generateUserId() {
+  return new ObjectId().toString();
 }
 
 export async function POST(req) {
@@ -127,12 +132,19 @@ export async function POST(req) {
       }
 
       const newUser = {
+        userId: generateUserId(),
         email: email,
         upi: upi,
         name: storedData.name || '',
         friends: [],
+        groups: [],
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        isActive: true,
+        profile: {
+          displayName: storedData.name || email.split('@')[0],
+          avatarColor: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)` // Random color for avatar
+        }
       };
 
       const result = await db.collection('users').insertOne(newUser);
