@@ -34,9 +34,32 @@ export async function GET(request) {
       'members.userId': user.userId
     }).toArray();
     
+    // Calculate real-time statistics for each group
+    const groupsWithStats = await Promise.all(groups.map(async (group) => {
+      // Get expenses for this group
+      const expenses = await db.collection('expenses').find({
+        groupId: group.groupId,
+        isActive: true
+      }).toArray();
+      
+      // Calculate actual statistics
+      const totalExpenses = expenses.length;
+      const totalAmount = expenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+      
+      // Update the group object with real-time stats
+      return {
+        ...group,
+        stats: {
+          totalExpenses: totalExpenses,
+          totalAmount: totalAmount,
+          memberCount: group.members ? group.members.length : 0
+        }
+      };
+    }));
+    
     return NextResponse.json({ 
       success: true, 
-      data: groups 
+      data: groupsWithStats 
     });
   } catch (error) {
     console.error('Groups GET error:', error);
