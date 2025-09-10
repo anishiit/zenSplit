@@ -94,11 +94,11 @@ export default function ProfilePage() {
               {/* Edit Mode */}
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Full Name</label>
                   <input
                     type="text"
                     name="name"
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                    className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
                     placeholder="Enter your full name"
                     value={form.name}
                     onChange={handleChange}
@@ -106,11 +106,11 @@ export default function ProfilePage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">UPI ID</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">UPI ID</label>
                   <input
                     type="text"
                     name="upi"
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                    className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
                     placeholder="yourname@upi"
                     value={form.upi}
                     onChange={handleChange}

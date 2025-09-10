@@ -68,8 +68,8 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m0 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
             </svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
-          <p className="text-gray-600">Sign in to your ZenSplit account</p>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Welcome Back</h2>
+          <p className="text-slate-600 font-medium">Sign in to your ZenSplit account</p>
         </div>
 
         {error && (
@@ -81,10 +81,10 @@ export default function LoginPage() {
         {step === 1 ? (
           <form onSubmit={handleSendOtp} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
               <input
                 type="email"
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -103,15 +103,15 @@ export default function LoginPage() {
         ) : (
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="text-center mb-4">
-              <p className="text-gray-600">We&apos;ve sent an OTP to</p>
-              <p className="font-semibold text-gray-800">{email}</p>
+              <p className="text-slate-600 font-medium">We&apos;ve sent an OTP to</p>
+              <p className="font-semibold text-slate-900">{email}</p>
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Enter OTP</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Enter OTP</label>
               <input
                 type="text"
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-center text-lg tracking-widest"
+                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-center text-lg tracking-widest text-slate-900"
                 placeholder="000000"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}

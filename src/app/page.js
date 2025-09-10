@@ -163,10 +163,10 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+          <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent mb-6 tracking-tight">
             Welcome to ZenSplit
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
+          <p className="text-xl text-slate-600 mb-8 font-medium leading-relaxed">
             Split expenses effortlessly with friends and family
           </p>
           
@@ -178,8 +178,8 @@ export default function Dashboard() {
                   <span className="text-white text-xl">💰</span>
                 </div>
               </div>
-              <p className="text-2xl font-bold text-gray-800">₹{calculateTotalExpenses().toFixed(2)}</p>
-              <p className="text-gray-600">Total Expenses</p>
+              <p className="text-2xl font-bold text-slate-900">₹{calculateTotalExpenses().toFixed(2)}</p>
+              <p className="text-slate-600 font-medium">Total Expenses</p>
             </div>
             
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
@@ -188,8 +188,8 @@ export default function Dashboard() {
                   <span className="text-white text-xl">👥</span>
                 </div>
               </div>
-              <p className="text-2xl font-bold text-gray-800">{friends.length}</p>
-              <p className="text-gray-600">Friends</p>
+              <p className="text-2xl font-bold text-slate-900">{friends.length}</p>
+              <p className="text-slate-600 font-medium">Friends</p>
             </div>
             
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
@@ -198,8 +198,8 @@ export default function Dashboard() {
                   <span className="text-white text-xl">📊</span>
                 </div>
               </div>
-              <p className="text-2xl font-bold text-gray-800">{expenses.length}</p>
-              <p className="text-gray-600">Transactions</p>
+              <p className="text-2xl font-bold text-slate-900">{expenses.length}</p>
+              <p className="text-slate-600 font-medium">Transactions</p>
             </div>
           </div>
         </div>

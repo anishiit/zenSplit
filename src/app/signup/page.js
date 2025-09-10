@@ -75,8 +75,8 @@ export default function SignupPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Create Account</h2>
-          <p className="text-gray-600">Join ZenSplit to manage your expenses</p>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Create Account</h2>
+          <p className="text-slate-600 font-medium">Join ZenSplit to manage your expenses</p>
         </div>
 
         {error && (
@@ -88,10 +88,10 @@ export default function SignupPage() {
         {step === 1 ? (
           <form onSubmit={handleSendOtp} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Full Name</label>
               <input
                 type="text"
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
                 placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -100,10 +100,10 @@ export default function SignupPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
               <input
                 type="email"
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -112,10 +112,10 @@ export default function SignupPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">UPI ID</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">UPI ID</label>
               <input
                 type="text"
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900"
                 placeholder="yourname@upi"
                 value={upi}
                 onChange={(e) => setUpi(e.target.value)}
