@@ -35,6 +35,28 @@ function Dashboard() {
   const searchParams = useSearchParams();
   const groupId = searchParams.get('groupId');
 
+  // Helper function to format timestamps
+  const getValidatedTimestamp = (expense) => {
+    const timestamp = expense.createdAt || expense.timestamp;
+    if (!timestamp) return 'Unknown time';
+    
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return 'Invalid date';
+      
+      return date.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return 'Invalid date';
+    }
+  };
+
   useEffect(() => {
     const email = localStorage.getItem('userEmail');
     if (!email) {
@@ -535,6 +557,9 @@ function Dashboard() {
                         <p className="font-medium text-gray-900">{expense.description}</p>
                         <p className="text-sm text-gray-500">
                           Paid by {expense.payer === userEmail ? 'You' : expense.payer}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {getValidatedTimestamp(expense)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">

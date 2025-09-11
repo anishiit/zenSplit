@@ -470,7 +470,7 @@ export default function TripExpenseManager() {
                         Paid by <span className="font-semibold text-purple-700">{expense.payer}</span>
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Payment Time: {getValidatedTimestamp(expense.timestamp)}
+                        Payment Time: {getValidatedTimestamp(expense.createdAt || expense.timestamp)}
                       </p>
                       <div className="mt-2 flex items-center gap-2 text-sm">
                         <span className="px-2 py-1 bg-gray-200 text-gray-900 rounded-md font-semibold">
