@@ -698,7 +698,7 @@ function Dashboard() {
                           <UPIPaymentButton
                             upiId={userProfiles[email]?.upi}
                             name={userProfiles[email]?.name}
-                            amount={Math.abs(balance).toFixed(2)}
+                            amount={Math.abs(balance)}
                             note={`Settlement from zenSplit - ${userEmail}`}
                             className="text-xs px-3 py-1"
                           />
