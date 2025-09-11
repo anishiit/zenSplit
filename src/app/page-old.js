@@ -9,6 +9,7 @@ export default function TripExpenseManager() {
   const [newFriend, setNewFriend] = useState("");
   const [settlements, setSettlements] = useState([]);
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
   const [newExpense, setNewExpense] = useState({
     description: '',
     amount: '',
@@ -35,13 +36,14 @@ export default function TripExpenseManager() {
   const fetchExpenses = async () => {
     try {
       // Get the logged-in user's email from localStorage (set after login)
-      const userEmail = localStorage.getItem('userEmail');
-      if (!userEmail) {
+      const email = localStorage.getItem('userEmail');
+      if (!email) {
         setExpenses([]);
         setLoading(false);
         return;
       }
-      const response = await fetch(`/api/expenses?email=${encodeURIComponent(userEmail)}`);
+      setUserEmail(email); // Set the state variable
+      const response = await fetch(`/api/expenses?email=${encodeURIComponent(email)}`);
       const { data } = await response.json();
       setExpenses(data);
     } catch (error) {
@@ -135,11 +137,15 @@ export default function TripExpenseManager() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ 
+          id: id,
+          userEmail: userEmail 
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete expense');
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to delete expense');
       }
     } catch (error) {
       console.error('Error deleting expense:', error);
@@ -476,15 +482,17 @@ export default function TripExpenseManager() {
                         </span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        setExpenseToDelete(expense);
-                        setShowDeleteConfirm(true);
-                      }}
-                      className="text-gray-400 hover:text-red-500 p-2 -m-2"
-                    >
-                      Delete
-                    </button>
+                    {(expense.userEmail === userEmail || expense.createdBy === userEmail) && (
+                      <button
+                        onClick={() => {
+                          setExpenseToDelete(expense);
+                          setShowDeleteConfirm(true);
+                        }}
+                        className="text-gray-400 hover:text-red-500 p-2 -m-2"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

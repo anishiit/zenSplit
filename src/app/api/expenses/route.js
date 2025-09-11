@@ -199,7 +199,7 @@ export async function POST(request) {
 
 export async function DELETE(request) {
   try {
-    const { id } = await request.json();
+    const { id, userEmail } = await request.json();
     
     if (!id) {
       return NextResponse.json({ 
@@ -207,8 +207,46 @@ export async function DELETE(request) {
         error: 'Expense ID is required' 
       }, { status: 400 });
     }
+
+    if (!userEmail) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User email is required' 
+      }, { status: 400 });
+    }
     
     const db = await getDb();
+    
+    // Find the user making the request
+    const user = await db.collection('users').findOne({ email: userEmail });
+    if (!user) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User not found' 
+      }, { status: 404 });
+    }
+    
+    // Find the expense first to check authorization
+    const expense = await db.collection('expenses').findOne({ 
+      _id: new ObjectId(id) 
+    });
+    
+    if (!expense) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Expense not found' 
+      }, { status: 404 });
+    }
+    
+    // Check if the user is the one who created the expense
+    if (expense.createdBy !== user.userId && expense.userEmail !== userEmail) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'You can only delete expenses that you created' 
+      }, { status: 403 });
+    }
+    
+    // Delete the expense
     const result = await db.collection('expenses').deleteOne({ 
       _id: new ObjectId(id) 
     });
@@ -216,8 +254,8 @@ export async function DELETE(request) {
     if (result.deletedCount === 0) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Expense not found' 
-      }, { status: 404 });
+        error: 'Failed to delete expense' 
+      }, { status: 500 });
     }
     
     return NextResponse.json({ 
