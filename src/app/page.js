@@ -526,7 +526,7 @@ function Dashboard() {
                       {email === userEmail ? 'You' : email}
                     </span>
                     <span className={`font-semibold text-sm sm:text-base ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ${Math.abs(balance).toFixed(2)} {balance >= 0 ? 'owed to you' : 'you owe'}
+                      ₹{Math.abs(balance).toFixed(2)} {balance >= 0 ? 'owed to you' : 'you owe'}
                     </span>
                   </div>
                 ))}
@@ -550,7 +550,7 @@ function Dashboard() {
                           Paid by {expense.payer === userEmail ? 'You' : expense.payer}
                         </p>
                       </div>
-                      <span className="font-semibold text-gray-900 text-sm sm:text-base">${expense.amount}</span>
+                      <span className="font-semibold text-gray-900 text-sm sm:text-base">₹{expense.amount}</span>
                     </div>
                   </div>
                 ))}
@@ -653,7 +653,7 @@ function Dashboard() {
                 <input
                   type="number"
                   step="0.01"
-                  placeholder="Amount"
+                  placeholder="Amount (₹)"
                   value={expenseAmount}
                   onChange={(e) => setExpenseAmount(e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"

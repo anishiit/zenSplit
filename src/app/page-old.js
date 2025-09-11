@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from "react";
-import { FaDollarSign, FaUsers, FaPercentage, FaPlus, FaMoneyBillWave, FaCheckCircle, FaTimes } from "react-icons/fa";
+import { FaUsers, FaPercentage, FaPlus, FaMoneyBillWave, FaCheckCircle, FaTimes } from "react-icons/fa";
 
 export default function TripExpenseManager() {
   const [expenses, setExpenses] = useState([]);
