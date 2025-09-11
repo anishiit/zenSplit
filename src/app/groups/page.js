@@ -13,6 +13,11 @@ export default function GroupsPage() {
   });
   const [userEmail, setUserEmail] = useState('');
   const [error, setError] = useState('');
+  
+  // Delete confirmation states
+  const [showDeleteGroupConfirm, setShowDeleteGroupConfirm] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState(null);
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -82,6 +87,32 @@ export default function GroupsPage() {
     router.push(`/?group=${groupId}`);
   };
 
+  const deleteGroup = async (groupId) => {
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          groupId: groupId,
+          userEmail: userEmail 
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        // Refresh groups list
+        fetchGroups(userEmail);
+      } else {
+        alert(result.error || 'Failed to delete group');
+      }
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      alert('Error deleting group');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -139,52 +170,69 @@ export default function GroupsPage() {
             {groups.map((group) => (
               <div
                 key={group.groupId}
-                onClick={() => openGroup(group.groupId)}
-                className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transform hover:scale-105 transition-all duration-200 cursor-pointer"
+                className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transform hover:scale-105 transition-all duration-200 cursor-pointer relative"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">
-                      {group.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <span className="text-sm text-slate-500">
-                    {group.stats.memberCount} members
-                  </span>
-                </div>
-                
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">{group.name}</h3>
-                {group.description && (
-                  <p className="text-sm text-slate-600 mb-4">{group.description}</p>
-                )}
-                
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div>
-                    <p className="text-lg font-bold text-slate-900">₹{group.stats.totalAmount.toFixed(2)}</p>
-                    <p className="text-xs text-slate-500">Total Spent</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-slate-900">{group.stats.totalExpenses}</p>
-                    <p className="text-xs text-slate-500">Expenses</p>
-                  </div>
-                </div>
-                
-                <div className="mt-4 flex -space-x-2">
-                  {group.members.slice(0, 4).map((member, index) => (
-                    <div
-                      key={member.userId}
-                      className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full border-2 border-white flex items-center justify-center"
-                    >
-                      <span className="text-white text-xs font-semibold">
-                        {member.name.charAt(0).toUpperCase()}
+                {/* Delete button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent opening the group
+                    setGroupToDelete(group);
+                    setShowDeleteGroupConfirm(true);
+                  }}
+                  className="absolute top-3 right-3 text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-full transition-colors z-10"
+                  title="Delete group"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+
+                {/* Group card content */}
+                <div onClick={() => openGroup(group.groupId)}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">
+                        {group.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                  ))}
-                  {group.members.length > 4 && (
-                    <div className="w-8 h-8 bg-slate-300 rounded-full border-2 border-white flex items-center justify-center">
-                      <span className="text-slate-600 text-xs">+{group.members.length - 4}</span>
-                    </div>
+                    <span className="text-sm text-slate-500">
+                      {group.stats.memberCount} members
+                    </span>
+                  </div>
+                  
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{group.name}</h3>
+                  {group.description && (
+                    <p className="text-sm text-slate-600 mb-4">{group.description}</p>
                   )}
+                  
+                  <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                      <p className="text-lg font-bold text-slate-900">₹{group.stats.totalAmount.toFixed(2)}</p>
+                      <p className="text-xs text-slate-500">Total Spent</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-slate-900">{group.stats.totalExpenses}</p>
+                      <p className="text-xs text-slate-500">Expenses</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 flex -space-x-2">
+                    {group.members.slice(0, 4).map((member, index) => (
+                      <div
+                        key={member.userId}
+                        className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full border-2 border-white flex items-center justify-center"
+                      >
+                        <span className="text-white text-xs font-semibold">
+                          {member.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                    {group.members.length > 4 && (
+                      <div className="w-8 h-8 bg-slate-300 rounded-full border-2 border-white flex items-center justify-center">
+                        <span className="text-slate-600 text-xs">+{group.members.length - 4}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -240,6 +288,47 @@ export default function GroupsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Group Confirmation Modal */}
+        {showDeleteGroupConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Delete Group
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete &quot;{groupToDelete?.name}&quot;?<br />
+                <span className="text-red-600 font-medium">This will permanently delete all expenses and data associated with this group.</span><br />
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteGroupConfirm(false);
+                    setGroupToDelete(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await deleteGroup(groupToDelete.groupId);
+                      setShowDeleteGroupConfirm(false);
+                      setGroupToDelete(null);
+                    } catch (error) {
+                      console.error('Deletion failed:', error);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete Group
+                </button>
+              </div>
             </div>
           </div>
         )}

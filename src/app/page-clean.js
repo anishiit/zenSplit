@@ -25,6 +25,12 @@ function Dashboard() {
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   
+  // Delete confirmation states
+  const [showDeleteExpenseConfirm, setShowDeleteExpenseConfirm] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState(null);
+  const [showDeleteFriendConfirm, setShowDeleteFriendConfirm] = useState(false);
+  const [friendToDelete, setFriendToDelete] = useState(null);
+  
   // Get groupId from URL parameters
   const searchParams = useSearchParams();
   const groupId = searchParams.get('groupId');
@@ -333,6 +339,65 @@ function Dashboard() {
     }));
   };
 
+  const deleteExpense = async (expenseId) => {
+    try {
+      const response = await fetch('/api/expenses', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: expenseId }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        // Refresh the appropriate data
+        if (groupId) {
+          fetchGroupData(userEmail, groupId);
+        } else {
+          fetchExpenses(userEmail);
+        }
+      } else {
+        alert(result.error || 'Failed to delete expense');
+      }
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      alert('Error deleting expense');
+    }
+  };
+
+  const deleteFriend = async (friendEmail) => {
+    try {
+      const response = await fetch('/api/friends', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          userEmail: userEmail,
+          friendEmail: friendEmail 
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        // Refresh friends list
+        fetchFriends(userEmail);
+        // Also refresh expenses and group data if needed
+        if (groupId) {
+          fetchGroupData(userEmail, groupId);
+        } else {
+          fetchExpenses(userEmail);
+        }
+      } else {
+        alert(result.error || 'Failed to delete friend');
+      }
+    } catch (error) {
+      console.error('Error deleting friend:', error);
+      alert('Error deleting friend');
+    }
+  };
+
   const toggleFriendSelection = (friend) => {
     setSelectedFriends(prev => {
       const isSelected = prev.some(f => f.email === friend.email);
@@ -414,6 +479,18 @@ function Dashboard() {
                         </span>
                       )}
                     </div>
+                    <button
+                      onClick={() => {
+                        setFriendToDelete(friend);
+                        setShowDeleteFriendConfirm(true);
+                      }}
+                      className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Remove friend"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -457,7 +534,21 @@ function Dashboard() {
                           Paid by {expense.payer === userEmail ? 'You' : expense.payer}
                         </p>
                       </div>
-                      <span className="font-semibold text-gray-900">₹{expense.amount}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900">₹{expense.amount}</span>
+                        <button
+                          onClick={() => {
+                            setExpenseToDelete(expense);
+                            setShowDeleteExpenseConfirm(true);
+                          }}
+                          className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                          title="Delete expense"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -664,6 +755,86 @@ function Dashboard() {
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                 >
                   Add Expense
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Expense Confirmation Modal */}
+        {showDeleteExpenseConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Delete Expense
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete &quot;{expenseToDelete?.description}&quot;?<br />
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteExpenseConfirm(false);
+                    setExpenseToDelete(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await deleteExpense(expenseToDelete._id || expenseToDelete.expenseId);
+                      setShowDeleteExpenseConfirm(false);
+                      setExpenseToDelete(null);
+                    } catch (error) {
+                      console.error('Deletion failed:', error);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Friend Confirmation Modal */}
+        {showDeleteFriendConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Remove Friend
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to remove &quot;{friendToDelete?.name || friendToDelete?.email}&quot; from your friends list?<br />
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteFriendConfirm(false);
+                    setFriendToDelete(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await deleteFriend(friendToDelete.email);
+                      setShowDeleteFriendConfirm(false);
+                      setFriendToDelete(null);
+                    } catch (error) {
+                      console.error('Deletion failed:', error);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Remove
                 </button>
               </div>
             </div>

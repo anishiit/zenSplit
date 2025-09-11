@@ -305,3 +305,90 @@ export async function PUT(request) {
     }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const { groupId, userEmail } = await request.json();
+    
+    if (!groupId || !userEmail) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Group ID and user email are required' 
+      }, { status: 400 });
+    }
+    
+    const db = await getDb();
+    
+    // Find user first
+    const user = await db.collection('users').findOne({ email: userEmail });
+    if (!user) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'User not found' 
+      }, { status: 404 });
+    }
+    
+    // Find the group
+    const group = await db.collection('groups').findOne({ groupId: groupId });
+    if (!group) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Group not found' 
+      }, { status: 404 });
+    }
+    
+    // Check if user is a member of the group
+    const isMember = group.members.some(member => member.userId === user.userId);
+    if (!isMember) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'You are not a member of this group' 
+      }, { status: 403 });
+    }
+    
+    // Check if user is the only member or if they're the creator
+    const isOnlyMember = group.members.length === 1;
+    const isCreator = group.createdBy === user.userId;
+    
+    if (!isOnlyMember && !isCreator) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Only the group creator can delete the group, or you can leave if you are not the creator' 
+      }, { status: 403 });
+    }
+    
+    // Delete all expenses associated with this group
+    await db.collection('expenses').deleteMany({ groupId: groupId });
+    
+    // Delete the group
+    const result = await db.collection('groups').deleteOne({ groupId: groupId });
+    
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to delete group' 
+      }, { status: 500 });
+    }
+    
+    // Remove group reference from all members' user records
+    await db.collection('users').updateMany(
+      { 'groups': groupId },
+      { 
+        $pull: { groups: groupId },
+        $set: { updatedAt: new Date() }
+      }
+    );
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Group deleted successfully' 
+    });
+    
+  } catch (error) {
+    console.error('Groups DELETE error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
+  }
+}
