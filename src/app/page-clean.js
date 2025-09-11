@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from 'next/navigation';
+import UPIPaymentButton from '../components/UPIPaymentButton';
 
 function Dashboard() {
   const [userEmail, setUserEmail] = useState('');
@@ -24,6 +25,7 @@ function Dashboard() {
   // UI states
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [userProfiles, setUserProfiles] = useState({}); // Store user profiles for UPI payments
   
   // Delete confirmation states
   const [showDeleteExpenseConfirm, setShowDeleteExpenseConfirm] = useState(false);
@@ -127,6 +129,45 @@ function Dashboard() {
       fetchFriendsInternal(email);
     }
   }, [groupId]);
+
+  // Load user profiles when expenses change (for UPI payments)
+  useEffect(() => {
+    const loadUserProfiles = async () => {
+      if (expenses.length > 0) {
+        // Calculate balances to get emails
+        const balances = {};
+        expenses.forEach(expense => {
+          const participants = currentGroup ? 
+            [userEmail, ...expense.participants] : 
+            expense.participants;
+          
+          participants.forEach(email => {
+            if (!balances[email]) balances[email] = 0;
+            const amount = parseFloat(expense.amount) / participants.length;
+            if (expense.payer === email) {
+              balances[email] += expense.amount - amount;
+            } else {
+              balances[email] -= amount;
+            }
+          });
+        });
+
+        const emails = Object.keys(balances).filter(email => email !== userEmail);
+        const profiles = {};
+        
+        for (const email of emails) {
+          const profile = await fetchUserProfile(email);
+          if (profile) {
+            profiles[email] = profile;
+          }
+        }
+        
+        setUserProfiles(profiles);
+      }
+    };
+
+    loadUserProfiles();
+  }, [expenses, userEmail, currentGroup]);
 
   // Wrapper functions for external calls
   const fetchGroups = async (email) => {
@@ -423,6 +464,22 @@ function Dashboard() {
     }
   };
 
+  // Function to fetch user profile for UPI payments
+  const fetchUserProfile = async (email) => {
+    try {
+      const response = await fetch(`/api/profile?email=${encodeURIComponent(email)}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        return result.profile;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+  };
+
   const toggleFriendSelection = (friend) => {
     setSelectedFriends(prev => {
       const isSelected = prev.some(f => f.email === friend.email);
@@ -533,13 +590,27 @@ function Dashboard() {
               <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <div className="space-y-3 pr-2">
                   {Object.entries(balances).map(([email, balance]) => (
-                    <div key={email} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="font-medium text-gray-900">
-                        {email === userEmail ? 'You' : email}
-                      </span>
-                      <span className={`font-semibold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ₹{Math.abs(balance).toFixed(2)} {balance >= 0 ? 'owed to you' : 'you owe'}
-                      </span>
+                    <div key={email} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-900">
+                          {email === userEmail ? 'You' : email}
+                        </span>
+                        <span className={`font-semibold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ₹{Math.abs(balance).toFixed(2)} {balance >= 0 ? 'owed to you' : 'you owe'}
+                        </span>
+                      </div>
+                      {/* Settlement button - only show if current user owes money */}
+                      {balance < 0 && email !== userEmail && (
+                        <div className="flex justify-end mt-2">
+                          <UPIPaymentButton
+                            upiId={userProfiles[email]?.upi}
+                            name={userProfiles[email]?.name}
+                            amount={Math.abs(balance).toFixed(2)}
+                            note={`Settlement from zenSplit - ${userEmail}`}
+                            className="text-sm px-3 py-1"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
