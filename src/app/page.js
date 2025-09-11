@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from 'next/navigation';
 import UPIPaymentButton from '../components/UPIPaymentButton';
+import { calculateBalances, validateExpense, createEqualSplit, createPercentageSplit } from '../lib/calculationEngine';
 
 function Dashboard() {
   const [userEmail, setUserEmail] = useState('');
@@ -28,6 +29,9 @@ function Dashboard() {
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [userProfiles, setUserProfiles] = useState({}); // Store user profiles for UPI payments
+  const [isAddingExpense, setIsAddingExpense] = useState(false); // Loading state for expense submission
+  const [showCalculation, setShowCalculation] = useState(false); // Show calculation popup
+  const [selectedCalculationEmail, setSelectedCalculationEmail] = useState(''); // Email for calculation details
   
   // Delete confirmation states
   const [showDeleteExpenseConfirm, setShowDeleteExpenseConfirm] = useState(false);
@@ -185,22 +189,21 @@ function Dashboard() {
   useEffect(() => {
     const loadUserProfiles = async () => {
       if (expenses.length > 0) {
-        // Calculate balances to get emails
+        // Calculate balances using the same logic as calculateBalances function
         const balances = {};
         expenses.forEach(expense => {
-          const participants = currentGroup ? 
-            [userEmail, ...expense.participants] : 
-            expense.participants;
-          
-          participants.forEach(email => {
-            if (!balances[email]) balances[email] = 0;
-            const amount = parseFloat(expense.amount) / participants.length;
-            if (expense.payer === email) {
-              balances[email] += expense.amount - amount;
-            } else {
-              balances[email] -= amount;
-            }
-          });
+          // Check if expense.splits exists and is an object
+          if (expense.splits && typeof expense.splits === 'object') {
+            Object.entries(expense.splits).forEach(([email, amount]) => {
+              if (!balances[email]) balances[email] = 0;
+              
+              if (email === expense.payer) {
+                balances[email] += expense.amount - amount;
+              } else {
+                balances[email] -= amount;
+              }
+            });
+          }
         });
 
         const emails = Object.keys(balances).filter(email => email !== userEmail);
@@ -397,35 +400,72 @@ function Dashboard() {
       return;
     }
 
-    // Calculate splits based on type
-    let splits = {};
-    const participants = includeCurrentUser ? 
-      [userEmail, ...selectedFriends.map(f => f.email)] : 
-      selectedFriends.map(f => f.email);
-    
-    if (splitType === 'equal') {
-      const share = parseFloat(expenseAmount) / participants.length;
-      participants.forEach(email => {
-        splits[email] = share;
-      });
-    } else if (splitType === 'percentage') {
-      // Validate percentages sum to 100
-      const totalPercentage = participants.reduce((sum, email) => {
-        return sum + (parseFloat(customSplits[email]) || 0);
-      }, 0);
-      
-      if (Math.abs(totalPercentage - 100) > 0.01) {
-        alert('Percentages must sum to 100%');
-        return;
-      }
-      
-      participants.forEach(email => {
-        const percentage = parseFloat(customSplits[email]) || 0;
-        splits[email] = (parseFloat(expenseAmount) * percentage) / 100;
-      });
+    // Ensure payer is set (default to current user if not set)
+    const finalPayer = expensePayer || userEmail;
+
+    // Prevent multiple submissions
+    if (isAddingExpense) {
+      return;
     }
 
+    setIsAddingExpense(true);
+
     try {
+      let splits = {};
+      let participants = [];
+      
+      if (!includeCurrentUser && finalPayer === userEmail) {
+        // Special case: Current user pays but is not included in split
+        // This means current user is paying FOR the selected friends, not WITH them
+        const beneficiaries = selectedFriends.map(f => f.email);
+        participants = beneficiaries; // Set participants for API call
+        
+        if (beneficiaries.length === 0) {
+          // No one selected - this is just a personal expense
+          splits = { [finalPayer]: parseFloat(expenseAmount) };
+          participants = [finalPayer]; // Just the payer for personal expense
+        } else {
+          // Current user pays for others - split the amount among beneficiaries only
+          // The payer (current user) is NOT included in splits
+          if (splitType === 'equal') {
+            splits = createEqualSplit(beneficiaries, parseFloat(expenseAmount));
+          } else if (splitType === 'percentage') {
+            splits = createPercentageSplit(customSplits, parseFloat(expenseAmount));
+          }
+        }
+      } else {
+        // Normal case: include all participants in the split
+        if (includeCurrentUser) {
+          participants = [userEmail, ...selectedFriends.map(f => f.email)];
+        } else {
+          participants = selectedFriends.map(f => f.email);
+          // Add the payer if they're not the current user
+          if (finalPayer !== userEmail && !participants.includes(finalPayer)) {
+            participants.push(finalPayer);
+          }
+        }
+        
+        if (splitType === 'equal') {
+          splits = createEqualSplit(participants, parseFloat(expenseAmount));
+        } else if (splitType === 'percentage') {
+          splits = createPercentageSplit(customSplits, parseFloat(expenseAmount));
+        }
+      }
+
+      // Validate the expense before sending
+      const expenseData = {
+        description: expenseDescription,
+        amount: parseFloat(expenseAmount),
+        payer: finalPayer,
+        splits: splits
+      };
+
+      const validation = validateExpense(expenseData);
+      if (!validation.isValid) {
+        alert('Expense validation failed: ' + validation.errors.join(', '));
+        return;
+      }
+
       const response = await fetch('/api/expenses', {
         method: 'POST',
         headers: {
@@ -466,29 +506,19 @@ function Dashboard() {
     } catch (error) {
       console.error('Error adding expense:', error);
       alert('Error adding expense');
+    } finally {
+      setIsAddingExpense(false);
     }
   };
 
-  const calculateBalances = () => {
-    const balances = {};
-    
-    expenses.forEach(expense => {
-      // Check if expense.splits exists and is an object
-      if (expense.splits && typeof expense.splits === 'object') {
-        Object.entries(expense.splits).forEach(([email, amount]) => {
-          if (!balances[email]) balances[email] = 0;
-          
-          if (email === expense.payer) {
-            balances[email] += expense.amount - amount;
-          } else {
-            balances[email] -= amount;
-          }
-        });
-      }
-    });
-    
-    return balances;
-  };
+  // Use the new calculation engine with group member information
+  const groupMemberEmails = currentGroup ? 
+    [userEmail, ...currentGroup.members.map(m => m.email)] : 
+    [userEmail, ...friends.map(f => f.email)];
+  
+  const calculationResult = calculateBalances(expenses, userEmail, groupMemberEmails);
+  const balances = calculationResult.balances;
+  const calculationSummary = calculationResult.summary;
 
   const handleSplitChange = (email, value) => {
     setCustomSplits(prev => ({
@@ -582,8 +612,6 @@ function Dashboard() {
       </div>
     );
   }
-
-  const balances = calculateBalances();
 
   return (
     <div className="min-h-screen" style={{background: 'var(--bg-texture), linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)'}}>
@@ -721,7 +749,7 @@ function Dashboard() {
               </div>
               Money Matters
             </h2>
-            {Object.keys(balances).length === 0 ? (
+            {Object.entries(balances).filter(([email, balance]) => email !== userEmail && Math.abs(balance) > 0.01).length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center">
                   <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -734,26 +762,37 @@ function Dashboard() {
             ) : (
               <div className="max-h-80 overflow-y-auto scrollbar-custom">
                 <div className="space-y-4 pr-2">
-                  {Object.entries(balances).map(([email, balance]) => (
-                    <div key={email} className={`flex flex-col gap-3 p-4 rounded-xl border-l-4 ${balance >= 0 ? 'balance-positive' : 'balance-negative'}`}>
+                  {Object.entries(balances)
+                    .filter(([email, balance]) => email !== userEmail && Math.abs(balance) > 0.01) // Only show other people's balances
+                    .map(([email, balance]) => (
+                    <div key={email} className={`flex flex-col gap-3 p-4 rounded-xl border-l-4 ${balance > 0 ? 'balance-negative' : 'balance-positive'}`}>
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                         <div className="flex-1">
                           <span className="font-semibold text-lg" style={{color: 'var(--warm-gray-800)'}}>
-                            {email === userEmail ? 'You' : email}
+                            {email}
                           </span>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className={`font-bold text-xl ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            <span className={`font-bold text-xl ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                               ₹{Math.abs(balance).toFixed(2)}
                             </span>
-                            <span className={`text-sm px-2 py-1 rounded-full ${balance >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                              {balance >= 0 ? 'owes you' : 'you owe'}
+                            <span className={`text-sm px-2 py-1 rounded-full ${balance > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                              {balance > 0 ? 'you owe' : 'owes you'}
                             </span>
                           </div>
                         </div>
                       </div>
-                      {/* Settlement button - only show if current user owes money */}
-                      {balance < 0 && email !== userEmail && (
-                        <div className="flex justify-end mt-2">
+                      {/* Settlement button - only show if current user owes money (balance > 0) */}
+                      {balance > 0 && (
+                        <div className="flex justify-end mt-2 gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedCalculationEmail(email);
+                              setShowCalculation(true);
+                            }}
+                            className="text-xs px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                          >
+                            Show Calculation
+                          </button>
                           <UPIPaymentButton
                             upiId={userProfiles[email]?.upi}
                             name={userProfiles[email]?.name}
@@ -904,7 +943,8 @@ function Dashboard() {
                   placeholder="Expense description"
                   value={expenseDescription}
                   onChange={(e) => setExpenseDescription(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
+                  style={{ color: '#1f2937', backgroundColor: '#ffffff' }}
                 />
 
                 <input
@@ -913,7 +953,8 @@ function Dashboard() {
                   placeholder="Amount (₹)"
                   value={expenseAmount}
                   onChange={(e) => setExpenseAmount(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
+                  style={{ color: '#1f2937', backgroundColor: '#ffffff' }}
                 />
 
                 {/* Who paid selection */}
@@ -922,7 +963,8 @@ function Dashboard() {
                   <select
                     value={expensePayer}
                     onChange={(e) => setExpensePayer(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+                    style={{ color: '#1f2937', backgroundColor: '#ffffff' }}
                   >
                     <option value={userEmail}>You ({userEmail})</option>
                     {currentGroup && currentGroup.members && currentGroup.members
@@ -952,7 +994,8 @@ function Dashboard() {
                   <select
                     value={splitType}
                     onChange={(e) => setSplitType(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+                    style={{ color: '#1f2937', backgroundColor: '#ffffff' }}
                   >
                     <option value="equal">Split Equally</option>
                     <option value="percentage">Custom Percentages</option>
@@ -979,16 +1022,17 @@ function Dashboard() {
                         
                         {/* Percentage input for custom split */}
                         {splitType === 'percentage' && selectedFriends.some(f => f.email === friend.email) && (
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="100"
-                            placeholder="%"
-                            value={customSplits[friend.email] || ''}
-                            onChange={(e) => handleSplitChange(friend.email, e.target.value)}
-                            className="w-16 p-1 border border-gray-300 rounded text-gray-900"
-                          />
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          placeholder="%"
+                          value={customSplits[friend.email] || ''}
+                          onChange={(e) => handleSplitChange(friend.email, e.target.value)}
+                          className="w-16 p-1 border border-gray-300 rounded text-gray-900 bg-white"
+                          style={{ color: '#1f2937', backgroundColor: '#ffffff' }}
+                        />
                         )}
                       </div>
                     ))}
@@ -1005,7 +1049,8 @@ function Dashboard() {
                           placeholder="%"
                           value={customSplits[userEmail] || ''}
                           onChange={(e) => handleSplitChange(userEmail, e.target.value)}
-                          className="w-16 p-1 border border-gray-300 rounded text-gray-900"
+                          className="w-16 p-1 border border-gray-300 rounded text-gray-900 bg-white"
+                          style={{ color: '#1f2937', backgroundColor: '#ffffff' }}
                         />
                       </div>
                     )}
@@ -1030,9 +1075,14 @@ function Dashboard() {
                 </button>
                 <button
                   onClick={addExpense}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  disabled={isAddingExpense}
+                  className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors ${
+                    isAddingExpense 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
                 >
-                  Add Expense
+                  {isAddingExpense ? 'Adding...' : 'Add Expense'}
                 </button>
               </div>
             </div>
@@ -1113,6 +1163,113 @@ function Dashboard() {
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Calculation Details Popup */}
+        {showCalculation && selectedCalculationEmail && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">
+                  Calculation Details - {selectedCalculationEmail}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCalculation(false);
+                    setSelectedCalculationEmail('');
+                  }}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Total Balance */}
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-600">Total Balance</div>
+                  <div className={`text-xl font-bold ${balances[selectedCalculationEmail] > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    ₹{Math.abs(balances[selectedCalculationEmail] || 0).toFixed(2)}
+                    <span className="text-sm ml-2">
+                      {balances[selectedCalculationEmail] > 0 ? 'you owe' : 'owes you'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Expense Breakdown */}
+                <div>
+                  <h4 className="font-medium mb-2">Expense Breakdown:</h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {expenses.filter(expense => {
+                      // Show expenses where either user is payer or participant
+                      const isParticipant = expense.splits && selectedCalculationEmail in expense.splits;
+                      const isPayer = expense.payer === selectedCalculationEmail;
+                      const userIsPayer = expense.payer === userEmail;
+                      const userIsParticipant = expense.splits && userEmail in expense.splits;
+                      
+                      return (isParticipant || isPayer) && (userIsPayer || userIsParticipant);
+                    }).map((expense, index) => {
+                      const userSplit = expense.splits?.[userEmail] || 0;
+                      const otherSplit = expense.splits?.[selectedCalculationEmail] || 0;
+                      const userIsPayer = expense.payer === userEmail;
+                      const otherIsPayer = expense.payer === selectedCalculationEmail;
+                      
+                      let impact = 0;
+                      let description = '';
+                      
+                      if (userIsPayer && otherSplit > 0) {
+                        // User paid, other person owes their split
+                        impact = otherSplit;
+                        description = `${selectedCalculationEmail} owes you ₹${otherSplit.toFixed(2)}`;
+                      } else if (otherIsPayer && userSplit > 0) {
+                        // Other person paid, user owes their split
+                        impact = -userSplit;
+                        description = `You owe ₹${userSplit.toFixed(2)} to ${selectedCalculationEmail}`;
+                      }
+                      
+                      return (
+                        <div key={index} className="p-2 border rounded text-sm">
+                          <div className="font-medium">{expense.description}</div>
+                          <div className="text-gray-600">
+                            Amount: ₹{expense.amount.toFixed(2)} | Paid by: {expense.payer}
+                          </div>
+                          <div className={`font-medium ${impact > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {description}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Calculation Summary */}
+                {calculationSummary && (
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium mb-2">Summary:</h4>
+                    <div className="text-sm space-y-1">
+                      <div>Total Expenses: {calculationSummary.totalExpenses}</div>
+                      <div>Total Amount: ₹{calculationSummary.totalAmount?.toFixed(2)}</div>
+                      {calculationSummary.autoFixApplied && (
+                        <div className="text-orange-600">Auto-fix applied to corrupted data</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowCalculation(false);
+                    setSelectedCalculationEmail('');
+                  }}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Close
                 </button>
               </div>
             </div>
