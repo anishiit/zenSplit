@@ -130,8 +130,7 @@ Please open your UPI app manually and pay:
       onClick={handleUPIPayment}
       disabled={isLoading}
       className={`
-        bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg 
-        transition-colors duration-200 flex items-center gap-2 disabled:opacity-50 
+        btn-primary flex items-center gap-2 disabled:opacity-50 
         disabled:cursor-not-allowed ${className}
       `}
     >
