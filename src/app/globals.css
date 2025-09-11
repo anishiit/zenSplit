@@ -466,3 +466,42 @@ option {
   color: var(--neutral-900) !important;
   background-color: white !important;
 }
+
+/* TARGETED TEXT VISIBILITY FIXES - Only for problematic elements */
+/* Force dark text ONLY for form elements that have visibility issues */
+input, 
+select, 
+textarea {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+/* Select dropdown options */
+select option {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* Placeholder text visibility */
+input::placeholder, 
+textarea::placeholder {
+  color: #666666 !important;
+  -webkit-text-fill-color: #666666 !important;
+  opacity: 1 !important;
+}
+
+/* Only fix specific gray text classes that are too light */
+.text-gray-400 {
+  color: #6b7280 !important;
+}
+
+.text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.text-gray-600 {
+  color: #4b5563 !important;
+}

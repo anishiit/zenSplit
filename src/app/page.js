@@ -781,18 +781,19 @@ function Dashboard() {
                           </div>
                         </div>
                       </div>
-                      {/* Settlement button - only show if current user owes money (balance > 0) */}
-                      {balance > 0 && (
-                        <div className="flex justify-end mt-2 gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedCalculationEmail(email);
-                              setShowCalculation(true);
-                            }}
-                            className="text-xs px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                          >
-                            Show Calculation
-                          </button>
+                      {/* Show calculation button for all users, pay button only when user owes money */}
+                      <div className="flex justify-end mt-2 gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedCalculationEmail(email);
+                            setShowCalculation(true);
+                          }}
+                          className="text-xs px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                          Show Calculation
+                        </button>
+                        {/* Settlement button - only show if current user owes money (balance > 0) */}
+                        {balance > 0 && (
                           <UPIPaymentButton
                             upiId={userProfiles[email]?.upi}
                             name={userProfiles[email]?.name}
@@ -800,8 +801,8 @@ function Dashboard() {
                             note={`Settlement from zenSplit - ${userEmail}`}
                             className="text-xs px-3 py-1"
                           />
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1174,7 +1175,7 @@ function Dashboard() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-lg font-semibold text-gray-900">
                   Calculation Details - {selectedCalculationEmail}
                 </h3>
                 <button
@@ -1191,10 +1192,10 @@ function Dashboard() {
               <div className="space-y-4">
                 {/* Total Balance */}
                 <div className="p-3 bg-gray-50 rounded-lg">
-                  <div className="text-sm text-gray-600">Total Balance</div>
+                  <div className="text-sm text-gray-700 font-medium">Total Balance</div>
                   <div className={`text-xl font-bold ${balances[selectedCalculationEmail] > 0 ? 'text-red-600' : 'text-green-600'}`}>
                     ₹{Math.abs(balances[selectedCalculationEmail] || 0).toFixed(2)}
-                    <span className="text-sm ml-2">
+                    <span className="text-sm ml-2 text-gray-700">
                       {balances[selectedCalculationEmail] > 0 ? 'you owe' : 'owes you'}
                     </span>
                   </div>
@@ -1202,7 +1203,7 @@ function Dashboard() {
 
                 {/* Expense Breakdown */}
                 <div>
-                  <h4 className="font-medium mb-2">Expense Breakdown:</h4>
+                  <h4 className="font-medium mb-2 text-gray-900">Expense Breakdown:</h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {expenses.filter(expense => {
                       // Show expenses where either user is payer or participant
@@ -1233,8 +1234,8 @@ function Dashboard() {
                       
                       return (
                         <div key={index} className="p-2 border rounded text-sm">
-                          <div className="font-medium">{expense.description}</div>
-                          <div className="text-gray-600">
+                          <div className="font-medium text-gray-900">{expense.description}</div>
+                          <div className="text-gray-700">
                             Amount: ₹{expense.amount.toFixed(2)} | Paid by: {expense.payer}
                           </div>
                           <div className={`font-medium ${impact > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -1249,8 +1250,8 @@ function Dashboard() {
                 {/* Calculation Summary */}
                 {calculationSummary && (
                   <div className="p-3 bg-blue-50 rounded-lg">
-                    <h4 className="font-medium mb-2">Summary:</h4>
-                    <div className="text-sm space-y-1">
+                    <h4 className="font-medium mb-2 text-gray-900">Summary:</h4>
+                    <div className="text-sm space-y-1 text-gray-700">
                       <div>Total Expenses: {calculationSummary.totalExpenses}</div>
                       <div>Total Amount: ₹{calculationSummary.totalAmount?.toFixed(2)}</div>
                       {calculationSummary.autoFixApplied && (
