@@ -5,7 +5,7 @@ import { getDb } from '../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 
 // Configure your SMTP credentials in environment variables for security
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: process.env.SMTP_SERVICE || 'gmail',
   auth: {
     user: process.env.SMTP_USER,

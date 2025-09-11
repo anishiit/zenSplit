@@ -1,8 +1,8 @@
 'use client'
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from 'next/navigation';
 
-export default function Dashboard() {
+function Dashboard() {
   const [userEmail, setUserEmail] = useState('');
   const [friends, setFriends] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -671,5 +671,24 @@ export default function Dashboard() {
         )}
       </div>
     </div>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
+        <p className="text-slate-600 font-medium">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <Dashboard />
+    </Suspense>
   );
 }
