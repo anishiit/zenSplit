@@ -585,32 +585,34 @@ function Dashboard() {
             {friends.length === 0 ? (
               <p className="text-gray-500 text-sm sm:text-base">No {currentGroup ? 'members' : 'friends'} yet</p>
             ) : (
-              <div className="space-y-3">
-                {friends.map((friend, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{friend.name || friend.email}</p>
-                      <p className="text-xs sm:text-sm text-gray-500 truncate">{friend.email}</p>
-                      {friend.isRegistered && (
-                        <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full mt-1">
-                          Registered
-                        </span>
-                      )}
+              <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="space-y-3 pr-2">
+                  {friends.map((friend, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{friend.name || friend.email}</p>
+                        <p className="text-xs sm:text-sm text-gray-500 truncate">{friend.email}</p>
+                        {friend.isRegistered && (
+                          <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full mt-1">
+                            Registered
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setFriendToDelete(friend);
+                          setShowDeleteFriendConfirm(true);
+                        }}
+                        className="ml-2 text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Remove friend"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        setFriendToDelete(friend);
-                        setShowDeleteFriendConfirm(true);
-                      }}
-                      className="ml-2 text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Remove friend"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -621,17 +623,19 @@ function Dashboard() {
             {Object.keys(balances).length === 0 ? (
               <p className="text-gray-500 text-sm sm:text-base">No balances yet</p>
             ) : (
-              <div className="space-y-3">
-                {Object.entries(balances).map(([email, balance]) => (
-                  <div key={email} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg gap-1">
-                    <span className="font-medium text-gray-900 text-sm sm:text-base truncate">
-                      {email === userEmail ? 'You' : email}
-                    </span>
-                    <span className={`font-semibold text-sm sm:text-base ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ₹{Math.abs(balance).toFixed(2)} {balance >= 0 ? 'owed to you' : 'you owe'}
-                    </span>
-                  </div>
-                ))}
+              <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="space-y-3 pr-2">
+                  {Object.entries(balances).map(([email, balance]) => (
+                    <div key={email} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg gap-1">
+                      <span className="font-medium text-gray-900 text-sm sm:text-base truncate">
+                        {email === userEmail ? 'You' : email}
+                      </span>
+                      <span className={`font-semibold text-sm sm:text-base ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ₹{Math.abs(balance).toFixed(2)} {balance >= 0 ? 'owed to you' : 'you owe'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -642,39 +646,41 @@ function Dashboard() {
             {expenses.length === 0 ? (
               <p className="text-gray-500 text-sm sm:text-base">No expenses yet</p>
             ) : (
-              <div className="space-y-3">
-                {expenses.slice(0, 5).map((expense, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900 text-sm sm:text-base">{expense.description}</p>
-                        <p className="text-xs sm:text-sm text-gray-500">
-                          Paid by {expense.payer === userEmail ? 'You' : expense.payer}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {getValidatedTimestamp(expense)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 text-sm sm:text-base">₹{expense.amount}</span>
-                        {(expense.userEmail === userEmail || expense.createdBy === userEmail) && (
-                          <button
-                            onClick={() => {
-                              setExpenseToDelete(expense);
-                              setShowDeleteExpenseConfirm(true);
-                            }}
-                            className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
-                            title="Delete expense"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        )}
+              <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="space-y-3 pr-2">
+                  {expenses.map((expense, index) => (
+                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-gray-900 text-sm sm:text-base">{expense.description}</p>
+                          <p className="text-xs sm:text-sm text-gray-500">
+                            Paid by {expense.payer === userEmail ? 'You' : expense.payer}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {getValidatedTimestamp(expense)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900 text-sm sm:text-base">₹{expense.amount}</span>
+                          {(expense.userEmail === userEmail || expense.createdBy === userEmail) && (
+                            <button
+                              onClick={() => {
+                                setExpenseToDelete(expense);
+                                setShowDeleteExpenseConfirm(true);
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                              title="Delete expense"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
