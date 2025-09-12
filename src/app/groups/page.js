@@ -115,9 +115,9 @@ export default function GroupsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{background: 'var(--bg-texture), linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)'}}>
         <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-500"></div>
           <p className="text-slate-600 font-medium">Loading your groups...</p>
         </div>
       </div>
@@ -125,11 +125,11 @@ export default function GroupsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
+    <div className="min-h-screen py-12 px-4" style={{background: 'var(--bg-texture), linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)'}}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-orange-500 to-orange-600 bg-clip-text text-transparent mb-4">
             Your Groups
           </h1>
           <p className="text-xl text-slate-600 mb-8">
@@ -138,7 +138,7 @@ export default function GroupsPage() {
           
           <button
             onClick={() => setShowCreateGroup(true)}
-            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-xl hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg font-semibold"
+            className="btn-primary"
           >
             + Create New Group
           </button>
@@ -153,14 +153,14 @@ export default function GroupsPage() {
         {/* Groups Grid */}
         {groups.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+            <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-orange-200 rounded-full mx-auto mb-6 flex items-center justify-center">
               <span className="text-4xl">👥</span>
             </div>
             <h3 className="text-xl font-semibold text-slate-900 mb-2">No groups yet</h3>
             <p className="text-slate-600 mb-6">Create your first group to start managing expenses with friends</p>
             <button
               onClick={() => setShowCreateGroup(true)}
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="text-orange-600 hover:text-orange-700 font-medium"
             >
               Create your first group →
             </button>
@@ -170,7 +170,7 @@ export default function GroupsPage() {
             {groups.map((group) => (
               <div
                 key={group.groupId}
-                className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transform hover:scale-105 transition-all duration-200 cursor-pointer relative"
+                className="card hover:shadow-xl transform hover:scale-105 transition-all duration-200 cursor-pointer relative"
               >
                 {/* Delete button */}
                 <button
@@ -190,7 +190,7 @@ export default function GroupsPage() {
                 {/* Group card content */}
                 <div onClick={() => openGroup(group.groupId)}>
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
                       <span className="text-white font-bold text-lg">
                         {group.name.charAt(0).toUpperCase()}
                       </span>
@@ -220,7 +220,7 @@ export default function GroupsPage() {
                     {group.members.slice(0, 4).map((member, index) => (
                       <div
                         key={member.userId}
-                        className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full border-2 border-white flex items-center justify-center"
+                        className="w-8 h-8 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full border-2 border-white flex items-center justify-center"
                       >
                         <span className="text-white text-xs font-semibold">
                           {member.name.charAt(0).toUpperCase()}
@@ -242,20 +242,20 @@ export default function GroupsPage() {
         {/* Create Group Modal */}
         {showCreateGroup && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
-              <div className="p-6 border-b border-slate-200">
+            <div className="card max-w-md w-full">
+              <div className="pb-6 mb-6 border-b border-slate-200">
                 <h3 className="text-xl font-bold text-slate-900">Create New Group</h3>
                 <p className="text-slate-600 text-sm mt-1">Start managing expenses with your friends</p>
               </div>
               
-              <form onSubmit={createGroup} className="p-6 space-y-6">
+              <form onSubmit={createGroup} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Group Name</label>
                   <input
                     type="text"
                     value={newGroup.name}
                     onChange={(e) => setNewGroup(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 bg-white placeholder-slate-400"
+                    className="input-field w-full"
                     placeholder="e.g., Roommates, Vacation Trip, Work Team"
                     required
                   />
@@ -266,7 +266,7 @@ export default function GroupsPage() {
                   <textarea
                     value={newGroup.description}
                     onChange={(e) => setNewGroup(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 bg-white placeholder-slate-400"
+                    className="input-field w-full"
                     placeholder="What's this group for?"
                     rows={3}
                   />
@@ -276,13 +276,13 @@ export default function GroupsPage() {
                   <button
                     type="button"
                     onClick={() => setShowCreateGroup(false)}
-                    className="flex-1 px-4 py-3 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-medium"
+                    className="btn-secondary flex-1"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-3 rounded-xl hover:from-blue-600 hover:to-purple-700 font-medium"
+                    className="btn-primary flex-1"
                   >
                     Create Group
                   </button>
@@ -295,7 +295,7 @@ export default function GroupsPage() {
         {/* Delete Group Confirmation Modal */}
         {showDeleteGroupConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="card w-full max-w-md">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Delete Group
               </h3>
@@ -310,7 +310,7 @@ export default function GroupsPage() {
                     setShowDeleteGroupConfirm(false);
                     setGroupToDelete(null);
                   }}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  className="btn-secondary"
                 >
                   Cancel
                 </button>
@@ -324,7 +324,7 @@ export default function GroupsPage() {
                       console.error('Deletion failed:', error);
                     }
                   }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
                 >
                   Delete Group
                 </button>

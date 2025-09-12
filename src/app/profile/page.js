@@ -57,24 +57,25 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="py-12 px-4">
-      <div className="max-w-md mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
+    <div className="min-h-screen" style={{background: 'var(--bg-texture), linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)'}}>
+      <div className="py-12 px-4">
+        <div className="max-w-md mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">My Profile</h1>
+            <p className="text-gray-600">Manage your account information</p>
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">My Profile</h1>
-          <p className="text-gray-600">Manage your account information</p>
-        </div>
 
-        {/* Profile Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 backdrop-blur-sm">
+          {/* Profile Card */}
+          <div className="card">
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
               <p className="text-gray-600">Loading your profile...</p>
             </div>
           ) : error ? (
@@ -84,7 +85,7 @@ export default function ProfilePage() {
               </div>
               <button 
                 onClick={() => window.location.href = '/login'} 
-                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                className="bg-gradient-to-r from-orange-400 to-orange-600 text-white px-6 py-2 rounded-lg hover:from-orange-500 hover:to-orange-700 transition-all duration-200"
               >
                 Go to Login
               </button>
@@ -98,7 +99,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     name="name"
-                    className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
+                    className="input-field w-full"
                     placeholder="Enter your full name"
                     value={form.name}
                     onChange={handleChange}
@@ -110,7 +111,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     name="upi"
-                    className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
+                    className="input-field w-full"
                     placeholder="yourname@upi"
                     value={form.upi}
                     onChange={handleChange}
@@ -120,13 +121,13 @@ export default function ProfilePage() {
                 <div className="flex gap-3 pt-4">
                   <button 
                     onClick={handleSave} 
-                    className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg"
+                    className="btn-primary flex-1"
                   >
                     Save Changes
                   </button>
                   <button 
                     onClick={() => setEditMode(false)} 
-                    className="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 transition-all duration-200"
+                    className="btn-secondary flex-1"
                   >
                     Cancel
                   </button>
@@ -137,7 +138,7 @@ export default function ProfilePage() {
             <>
               {/* View Mode */}
               <div className="space-y-6">
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center mb-2">
                     <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
@@ -147,7 +148,7 @@ export default function ProfilePage() {
                   <p className="text-lg text-gray-800 font-medium">{profile.email || 'Not set'}</p>
                 </div>
 
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center mb-2">
                     <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -157,7 +158,7 @@ export default function ProfilePage() {
                   <p className="text-lg text-gray-800 font-medium">{profile.name || 'Click Edit to add your name'}</p>
                 </div>
 
-                <div className="bg-gray-50 rounded-xl p-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center mb-2">
                     <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
@@ -169,7 +170,7 @@ export default function ProfilePage() {
 
                 <button 
                   onClick={() => setEditMode(true)} 
-                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-4 px-6 rounded-xl hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+                  className="btn-primary w-full flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -179,6 +180,7 @@ export default function ProfilePage() {
               </div>
             </>
           )}
+          </div>
         </div>
       </div>
     </div>

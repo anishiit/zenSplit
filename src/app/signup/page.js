@@ -67,10 +67,10 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="py-12 px-4">
-      <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl w-full max-w-md mx-auto border border-white/20">
+    <div className="min-h-screen py-12 px-4" style={{background: 'var(--bg-texture), linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)'}}>
+      <div className="card w-full max-w-md mx-auto">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full mx-auto mb-4 flex items-center justify-center">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
@@ -91,7 +91,7 @@ export default function SignupPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-2">Full Name</label>
               <input
                 type="text"
-                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
+                className="input-field w-full"
                 placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -103,7 +103,7 @@ export default function SignupPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
               <input
                 type="email"
-                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
+                className="input-field w-full"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -115,7 +115,7 @@ export default function SignupPage() {
               <label className="block text-sm font-semibold text-slate-700 mb-2">UPI ID</label>
               <input
                 type="text"
-                className="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-slate-900 bg-white placeholder-slate-400"
+                className="input-field w-full"
                 placeholder="yourname@upi"
                 value={upi}
                 onChange={(e) => setUpi(e.target.value)}
@@ -126,7 +126,7 @@ export default function SignupPage() {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-4 px-6 rounded-xl hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:transform-none"
+              className="btn-primary w-full disabled:opacity-50 disabled:transform-none"
             >
               {loading ? 'Sending OTP...' : 'Send OTP'}
             </button>
@@ -142,7 +142,7 @@ export default function SignupPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Enter OTP</label>
               <input
                 type="text"
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-center text-lg tracking-widest"
+                className="input-field w-full text-center text-lg tracking-widest"
                 placeholder="000000"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
@@ -155,14 +155,14 @@ export default function SignupPage() {
               <button 
                 type="button"
                 onClick={() => setStep(1)}
-                className="flex-1 bg-gray-100 text-gray-700 font-semibold py-4 px-6 rounded-xl hover:bg-gray-200 transition-all duration-200"
+                className="btn-secondary flex-1"
               >
                 Back
               </button>
               <button 
                 type="submit" 
                 disabled={loading}
-                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-4 px-6 rounded-xl hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:transform-none"
+                className="btn-primary flex-1 disabled:opacity-50 disabled:transform-none"
               >
                 {loading ? 'Verifying...' : 'Create Account'}
               </button>
@@ -173,7 +173,7 @@ export default function SignupPage() {
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             Already have an account?{' '}
-            <a href="/login" className="text-blue-600 hover:text-blue-700 font-semibold">
+            <a href="/login" className="text-orange-600 hover:text-orange-700 font-semibold">
               Sign In
             </a>
           </p>
