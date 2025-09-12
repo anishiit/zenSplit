@@ -17,6 +17,14 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata = {
   title: "ZenSplit - Smart Expense Splitting",
   description: "Split expenses effortlessly with friends and family",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/zensplit-logo.svg', type: 'image/svg+xml' }
+    ],
+    shortcut: '/favicon.svg',
+    apple: '/zensplit-logo.svg',
+  },
 };
 
 export default function RootLayout({ children }) {

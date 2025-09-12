@@ -1,1 +1,23 @@
-<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Orange gradient background circle -->
+  <defs>
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FB923C;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F97316;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EA580C;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2DD4BF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#14B8A6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main orange circle -->
+  <circle cx="100" cy="100" r="80" fill="url(#orangeGrad)" />
+  
+  <!-- Z letter -->
+  <text x="100" y="130" font-family="Arial, sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="white">Z</text>
+  
+  <!-- Small teal accent circle -->
+  <circle cx="160" cy="40" r="20" fill="url(#tealGrad)" />
+</svg>
