@@ -55,9 +55,10 @@ export class ExpenseCalculationEngine {
    * @param {Array} expenses - Array of expense objects
    * @param {string} currentUserEmail - Email of the current user
    * @param {Array} groupMembers - Optional array of group member emails for auto-fixing
+   * @param {Array} verifiedPayments - Optional array of verified payment records
    * @returns {Object} - Calculated balances and summary
    */
-  calculateBalances(expenses, currentUserEmail, groupMembers = []) {
+  calculateBalances(expenses, currentUserEmail, groupMembers = [], verifiedPayments = []) {
     try {
       // Input validation
       if (!Array.isArray(expenses)) {
@@ -88,6 +89,9 @@ export class ExpenseCalculationEngine {
         }
       });
 
+      // Apply verified payments to adjust balances
+      this.applyVerifiedPayments(balances, verifiedPayments, currentUserEmail);
+
       // Calculate final balances
       const finalBalances = this.finalizeBalances(balances, currentUserEmail);
       
@@ -96,14 +100,16 @@ export class ExpenseCalculationEngine {
         finalBalances, 
         userTotals, 
         totalExpenseAmount, 
-        currentUserEmail
+        currentUserEmail,
+        verifiedPayments
       );
 
       return {
         balances: finalBalances,
         summary,
         details: expenseDetails,
-        totalExpenseAmount: this.roundCurrency(totalExpenseAmount)
+        totalExpenseAmount: this.roundCurrency(totalExpenseAmount),
+        verifiedPayments: verifiedPayments || []
       };
     } catch (error) {
       console.error('Calculation engine error:', error);
@@ -111,7 +117,8 @@ export class ExpenseCalculationEngine {
         balances: {},
         summary: { error: error.message },
         details: [],
-        totalExpenseAmount: 0
+        totalExpenseAmount: 0,
+        verifiedPayments: []
       };
     }
   }
@@ -311,6 +318,35 @@ export class ExpenseCalculationEngine {
   }
 
   /**
+   * Apply verified payments to adjust balances
+   * @param {Object} balances - Current balances object
+   * @param {Array} verifiedPayments - Array of verified payment records
+   * @param {string} currentUserEmail - Current user email
+   */
+  applyVerifiedPayments(balances, verifiedPayments, currentUserEmail) {
+    if (!Array.isArray(verifiedPayments)) return;
+
+    verifiedPayments.forEach(payment => {
+      // Only process verified payments
+      if (payment.status !== 'verified') return;
+
+      const payer = payment.payer.trim().toLowerCase();
+      const payee = payment.payee.trim().toLowerCase();
+      const amount = this.parseAmount(payment.amount);
+
+      if (amount <= 0) return;
+
+      // Initialize users in balances if they don't exist
+      if (!balances[payer]) balances[payer] = 0;
+      if (!balances[payee]) balances[payee] = 0;
+
+      // Adjust balances: payer owes less, payee is owed less
+      balances[payer] += amount;  // Reduce what payer owes
+      balances[payee] -= amount;  // Reduce what payee is owed
+    });
+  }
+
+  /**
    * Finalize balances with proper rounding and filtering
    * @param {Object} balances - Raw balances
    * @param {string} currentUserEmail - Current user email
@@ -338,9 +374,10 @@ export class ExpenseCalculationEngine {
    * @param {Object} userTotals - User totals
    * @param {number} totalAmount - Total expense amount
    * @param {string} currentUserEmail - Current user email
+   * @param {Array} verifiedPayments - Array of verified payments
    * @returns {Object} - Summary object
    */
-  generateSummary(balances, userTotals, totalAmount, currentUserEmail) {
+  generateSummary(balances, userTotals, totalAmount, currentUserEmail, verifiedPayments = []) {
     const normalizedCurrentUser = currentUserEmail.trim().toLowerCase();
     const currentUserTotals = userTotals[normalizedCurrentUser] || { paid: 0, owes: 0 };
     
@@ -352,6 +389,28 @@ export class ExpenseCalculationEngine {
       return sum + (balance < 0 ? Math.abs(balance) : 0);
     }, 0);
 
+    // Calculate payment statistics
+    const totalVerifiedPayments = verifiedPayments.reduce((sum, payment) => {
+      if (payment.status === 'verified') {
+        return sum + this.parseAmount(payment.amount);
+      }
+      return sum;
+    }, 0);
+
+    const userPaymentsSent = verifiedPayments.reduce((sum, payment) => {
+      if (payment.status === 'verified' && payment.payer === currentUserEmail) {
+        return sum + this.parseAmount(payment.amount);
+      }
+      return sum;
+    }, 0);
+
+    const userPaymentsReceived = verifiedPayments.reduce((sum, payment) => {
+      if (payment.status === 'verified' && payment.payee === currentUserEmail) {
+        return sum + this.parseAmount(payment.amount);
+      }
+      return sum;
+    }, 0);
+
     return {
       totalExpenses: totalAmount,
       yourTotalPaid: this.roundCurrency(currentUserTotals.paid),
@@ -360,7 +419,10 @@ export class ExpenseCalculationEngine {
       youAreOwed: this.roundCurrency(youAreOwed),
       netBalance: this.roundCurrency(youAreOwed - youOwe),
       participantCount: Object.keys(userTotals).length,
-      isSettled: Math.abs(youOwe - youAreOwed) < this.EPSILON
+      isSettled: Math.abs(youOwe - youAreOwed) < this.EPSILON,
+      totalVerifiedPayments: this.roundCurrency(totalVerifiedPayments),
+      yourPaymentsSent: this.roundCurrency(userPaymentsSent),
+      yourPaymentsReceived: this.roundCurrency(userPaymentsReceived)
     };
   }
 
@@ -512,8 +574,8 @@ export class ExpenseCalculationEngine {
 export const calculationEngine = new ExpenseCalculationEngine();
 
 // Export utility functions
-export const calculateBalances = (expenses, currentUserEmail, groupMembers = []) => {
-  return calculationEngine.calculateBalances(expenses, currentUserEmail, groupMembers);
+export const calculateBalances = (expenses, currentUserEmail, groupMembers = [], verifiedPayments = []) => {
+  return calculationEngine.calculateBalances(expenses, currentUserEmail, groupMembers, verifiedPayments);
 };
 
 export const validateExpense = (expenseData) => {

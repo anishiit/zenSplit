@@ -2,6 +2,9 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from 'next/navigation';
 import UPIPaymentButton from '../components/UPIPaymentButton';
+import PaymentDeclarationModal from '../components/PaymentDeclarationModal';
+import PaymentVerificationCard from '../components/PaymentVerificationCard';
+import { showToast, showSuccessToast, showErrorToast, showWarningToast } from '../lib/toast';
 import { calculateBalances, validateExpense, createEqualSplit, createPercentageSplit } from '../lib/calculationEngine';
 
 function Dashboard() {
@@ -32,6 +35,12 @@ function Dashboard() {
   const [isAddingExpense, setIsAddingExpense] = useState(false); // Loading state for expense submission
   const [showCalculation, setShowCalculation] = useState(false); // Show calculation popup
   const [selectedCalculationEmail, setSelectedCalculationEmail] = useState(''); // Email for calculation details
+  
+  // Payment states
+  const [payments, setPayments] = useState([]);
+  const [showPaymentDeclaration, setShowPaymentDeclaration] = useState(false);
+  const [paymentDeclarationData, setPaymentDeclarationData] = useState(null);
+  const [showPendingPayments, setShowPendingPayments] = useState(false);
   
   // Delete confirmation states
   const [showDeleteExpenseConfirm, setShowDeleteExpenseConfirm] = useState(false);
@@ -147,6 +156,29 @@ function Dashboard() {
         console.error('Error fetching friends:', error);
       }
     };
+
+    const fetchPaymentsInternal = async () => {
+      try {
+        const queryParams = new URLSearchParams({
+          userEmail: email
+        });
+        
+        if (groupId) {
+          queryParams.append('groupId', groupId);
+        }
+
+        const response = await fetch(`/api/payments?${queryParams}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          setPayments(result.data);
+        } else {
+          console.error('Error fetching payments:', result.error);
+        }
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+      }
+    };
     
     const loadData = async () => {
       if (groupId) {
@@ -159,6 +191,8 @@ function Dashboard() {
         fetchExpensesInternal();
         fetchFriendsInternal();
       }
+      // Always fetch payments after other data is loaded
+      fetchPaymentsInternal();
     };
     
     // Initial load
@@ -516,7 +550,10 @@ function Dashboard() {
     [userEmail, ...currentGroup.members.map(m => m.email)] : 
     [userEmail, ...friends.map(f => f.email)];
   
-  const calculationResult = calculateBalances(expenses, userEmail, groupMemberEmails);
+  // Filter verified payments only for calculation
+  const verifiedPayments = payments.filter(payment => payment.status === 'verified');
+  
+  const calculationResult = calculateBalances(expenses, userEmail, groupMemberEmails, verifiedPayments);
   const balances = calculationResult.balances;
   const calculationSummary = calculationResult.summary;
 
@@ -599,6 +636,128 @@ function Dashboard() {
       }
     });
   };
+
+  // Payment-related functions
+  const fetchPayments = async () => {
+    try {
+      const queryParams = new URLSearchParams({
+        userEmail: userEmail
+      });
+      
+      if (groupId) {
+        queryParams.append('groupId', groupId);
+      }
+
+      const response = await fetch(`/api/payments?${queryParams}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setPayments(result.data);
+      } else {
+        console.error('Error fetching payments:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    }
+  };
+
+  const handlePaymentDeclare = async (paymentData) => {
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        showSuccessToast('Payment declared successfully! Waiting for verification.');
+        await fetchPayments(); // Refresh payments
+      } else {
+        showErrorToast(result.error || 'Failed to declare payment');
+      }
+    } catch (error) {
+      console.error('Error declaring payment:', error);
+      showErrorToast('Error declaring payment');
+    }
+  };
+
+  const handlePaymentVerify = async (paymentId) => {
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentId,
+          action: 'verify',
+          userEmail
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        showSuccessToast('Payment verified successfully!');
+        await fetchPayments(); // Refresh payments
+      } else {
+        showErrorToast(result.error || 'Failed to verify payment');
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      showErrorToast('Error verifying payment');
+    }
+  };
+
+  const handlePaymentCancel = async (paymentId) => {
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentId,
+          action: 'cancel',
+          userEmail
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        showSuccessToast('Payment cancelled successfully!');
+        await fetchPayments(); // Refresh payments
+      } else {
+        showErrorToast(result.error || 'Failed to cancel payment');
+      }
+    } catch (error) {
+      console.error('Error cancelling payment:', error);
+      showErrorToast('Error cancelling payment');
+    }
+  };
+
+  const openPaymentDeclaration = (payer, payee, amount) => {
+    setPaymentDeclarationData({
+      payer,
+      payee,
+      amount,
+      groupId,
+      userEmail
+    });
+    setShowPaymentDeclaration(true);
+  };
+
+  // Check for pending payment verifications
+  const pendingPaymentsForUser = payments.filter(payment => 
+    payment.status === 'pending' && payment.payee === userEmail
+  );
+
+  const hasPendingVerifications = pendingPaymentsForUser.length > 0;
 
   if (loading) {
     return (
@@ -683,6 +842,33 @@ function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Pending Payment Verifications Notification */}
+        {hasPendingVerifications && (
+          <div className="card mb-6 border-l-4 border-yellow-400 bg-yellow-50">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-yellow-800 mb-2">
+                  Payment Verification Required
+                </h3>
+                <p className="text-sm text-yellow-700 mb-3">
+                  You have {pendingPaymentsForUser.length} payment{pendingPaymentsForUser.length > 1 ? 's' : ''} waiting for your verification.
+                </p>
+                <button
+                  onClick={() => setShowPendingPayments(true)}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
+                >
+                  Review Payments
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Friends/Members List */}
@@ -794,13 +980,21 @@ function Dashboard() {
                         </button>
                         {/* Settlement button - only show if current user owes money (balance > 0) */}
                         {balance > 0 && (
-                          <UPIPaymentButton
-                            upiId={userProfiles[email]?.upi}
-                            name={userProfiles[email]?.name}
-                            amount={Math.abs(balance)}
-                            note={`Settlement from zenSplit - ${userEmail}`}
-                            className="text-xs px-3 py-1"
-                          />
+                          <>
+                            <UPIPaymentButton
+                              upiId={userProfiles[email]?.upi}
+                              name={userProfiles[email]?.name}
+                              amount={Math.abs(balance)}
+                              note={`Settlement from zenSplit - ${userEmail}`}
+                              className="text-xs px-3 py-1"
+                            />
+                            <button
+                              onClick={() => openPaymentDeclaration(userEmail, email, Math.abs(balance))}
+                              className="text-xs px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                            >
+                              Paid ✓
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -810,46 +1004,133 @@ function Dashboard() {
             )}
           </div>
 
-          {/* Recent Expenses */}
+          {/* Recent Expenses & Payments */}
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Recent Expenses</h2>
-            {expenses.length === 0 ? (
-              <p className="text-gray-500 text-sm sm:text-base">No expenses yet</p>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Recent Activity</h2>
+              <div className="flex space-x-2">
+                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                  {expenses.length} expenses
+                </span>
+                <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                  {payments.filter(p => p.status === 'verified').length} verified payments
+                </span>
+              </div>
+            </div>
+            
+            {expenses.length === 0 && payments.length === 0 ? (
+              <p className="text-gray-500 text-sm sm:text-base">No expenses or payments yet</p>
             ) : (
               <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <div className="space-y-3 pr-2">
-                  {expenses.map((expense, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-gray-900 text-sm sm:text-base">{expense.description}</p>
-                          <p className="text-xs sm:text-sm text-gray-500">
-                            Paid by {expense.payer === userEmail ? 'You' : expense.payer}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {getValidatedTimestamp(expense)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-900 text-sm sm:text-base">₹{expense.amount}</span>
-                          {(expense.userEmail === userEmail || expense.createdBy === userEmail) && (
-                            <button
-                              onClick={() => {
-                                setExpenseToDelete(expense);
-                                setShowDeleteExpenseConfirm(true);
-                              }}
-                              className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
-                              title="Delete expense"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                  {/* Combine expenses and payments, sort by date */}
+                  {[
+                    ...expenses.map(expense => ({ ...expense, type: 'expense' })),
+                    ...payments.map(payment => ({ ...payment, type: 'payment' }))
+                  ]
+                    .sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp))
+                    .map((item, index) => {
+                      if (item.type === 'expense') {
+                        return (
+                          <div key={`expense-${index}`} className="p-3 bg-gray-50 rounded-lg border-l-4 border-blue-400">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
+                                  </svg>
+                                  <p className="font-medium text-gray-900 text-sm sm:text-base">{item.description}</p>
+                                </div>
+                                <p className="text-xs sm:text-sm text-gray-500 ml-6">
+                                  Paid by {item.payer === userEmail ? 'You' : item.payer}
+                                </p>
+                                <p className="text-xs text-gray-400 ml-6">
+                                  {getValidatedTimestamp(item)}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900 text-sm sm:text-base">₹{item.amount}</span>
+                                {(item.userEmail === userEmail || item.createdBy === userEmail) && (
+                                  <button
+                                    onClick={() => {
+                                      setExpenseToDelete(item);
+                                      setShowDeleteExpenseConfirm(true);
+                                    }}
+                                    className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                                    title="Delete expense"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      } else {
+                        // Payment item
+                        const statusColors = {
+                          pending: 'border-yellow-400 bg-yellow-50',
+                          verified: 'border-green-400 bg-green-50',
+                          cancelled: 'border-red-400 bg-red-50'
+                        };
+                        
+                        const statusIcons = {
+                          pending: (
+                            <svg className="w-4 h-4 text-yellow-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            </svg>
+                          ),
+                          verified: (
+                            <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          ),
+                          cancelled: (
+                            <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                          )
+                        };
+
+                        return (
+                          <div key={`payment-${index}`} className={`p-3 rounded-lg border-l-4 ${statusColors[item.status] || statusColors.pending}`}>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  {statusIcons[item.status] || statusIcons.pending}
+                                  <p className="font-medium text-gray-900 text-sm sm:text-base">
+                                    Payment {item.status === 'verified' ? 'Verified' : item.status === 'cancelled' ? 'Cancelled' : 'Pending'}
+                                  </p>
+                                  <span className={`text-xs px-2 py-1 rounded-full capitalize ${
+                                    item.status === 'verified' ? 'bg-green-100 text-green-700' :
+                                    item.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                    'bg-yellow-100 text-yellow-700'
+                                  }`}>
+                                    {item.status}
+                                  </span>
+                                </div>
+                                <p className="text-xs sm:text-sm text-gray-500 ml-6">
+                                  From {item.payer === userEmail ? 'You' : item.payer} to {item.payee === userEmail ? 'You' : item.payee}
+                                </p>
+                                {item.note && (
+                                  <p className="text-xs text-gray-400 ml-6 italic">
+                                    &quot;{item.note}&quot;
+                                  </p>
+                                )}
+                                <p className="text-xs text-gray-400 ml-6">
+                                  {getValidatedTimestamp(item)}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900 text-sm sm:text-base">₹{item.amount.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                    })}
                 </div>
               </div>
             )}
@@ -1272,6 +1553,70 @@ function Dashboard() {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Declaration Modal */}
+        <PaymentDeclarationModal
+          isOpen={showPaymentDeclaration}
+          onClose={() => {
+            setShowPaymentDeclaration(false);
+            setPaymentDeclarationData(null);
+          }}
+          onPaymentDeclare={handlePaymentDeclare}
+          payer={paymentDeclarationData?.payer}
+          payee={paymentDeclarationData?.payee}
+          amount={paymentDeclarationData?.amount}
+          groupId={paymentDeclarationData?.groupId}
+          userEmail={userEmail}
+        />
+
+        {/* Pending Payments Modal */}
+        {showPendingPayments && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Payment Verifications Required
+                  </h2>
+                  <button
+                    onClick={() => setShowPendingPayments(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="space-y-4">
+                  {pendingPaymentsForUser.map((payment) => (
+                    <PaymentVerificationCard
+                      key={payment._id}
+                      payment={payment}
+                      onVerify={handlePaymentVerify}
+                      onCancel={handlePaymentCancel}
+                      currentUserEmail={userEmail}
+                    />
+                  ))}
+                  
+                  {pendingPaymentsForUser.length === 0 && (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <p className="text-lg font-medium text-gray-900">All caught up!</p>
+                      <p className="text-gray-500 mt-1">No payments waiting for verification.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
